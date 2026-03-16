@@ -7,8 +7,7 @@ on:
     branches: [main]
 
 env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: fury2701/mediazone
+  IMAGE: ghcr.io/fury2701/mediazone
 
 jobs:
   # ── 1. TESTS ───────────────────────────────────────────────────────────────
@@ -64,24 +63,28 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Потрібен явно — без нього buildx cache падає
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
       - name: Log in to GHCR
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
-          username: fury2701
+          username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Extract metadata
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/fury2701/mediazone
+          images: ${{ env.IMAGE }}
           tags: |
             type=sha,prefix=,format=short
             type=raw,value=latest
 
       - name: Build and push
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: ./backend
           push: true
@@ -90,18 +93,20 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      # Робимо пакет публічним щоб K3S міг пулити без секрету
+      # Робимо пакет публічним щоб K3S пулив без imagePullSecret
       - name: Make GHCR package public
         run: |
-          curl -s -X PATCH \
+          curl -s -o /dev/null -w "%{http_code}" -X PATCH \
             -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
             -H "Accept: application/vnd.github+json" \
             "https://api.github.com/user/packages/container/mediazone/visibility" \
-            -d '{"visibility":"public"}' || echo "Package visibility update skipped (may need PAT)"
+            -d '{"visibility":"public"}' \
+          | grep -q "200" && echo "✓ Package is public" \
+          || echo "⚠ Visibility update skipped — зроби вручну на github.com/fury2701 → Packages → mediazone → Settings"
 
   # ── 3. UPDATE HELM VALUES → ArgoCD auto-sync ──────────────────────────────
   deploy:
-    name: Update image tag → ArgoCD sees it → K3S deploys
+    name: Update image tag → ArgoCD sync → K3S deploy
     runs-on: ubuntu-latest
     needs: build
     if: github.ref == 'refs/heads/main'
@@ -116,7 +121,7 @@ jobs:
       - name: Patch image tag in values.yaml
         run: |
           NEW_TAG="${{ needs.build.outputs.image_tag }}"
-          echo "Deploying image tag: ${NEW_TAG}"
+          echo "Deploying: $NEW_TAG"
           sed -i "s|tag: .*|tag: \"${NEW_TAG}\"|" helm/mediazone/values.yaml
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"

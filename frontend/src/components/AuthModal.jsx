@@ -19,8 +19,11 @@ export default function AuthModal({ mode, onClose, onSwitch }) {
         toast.success('Акаунт створено!')
       }
       onClose()
+      // Даємо час toast показатись і перезавантажуємо
+      setTimeout(() => window.location.href = '/', 800)
     } catch (err) {
-      toast.error(err.response?.data?.detail || 'Помилка')
+      const msg = err.response?.data?.detail
+      toast.error(Array.isArray(msg) ? msg[0]?.msg || 'Помилка' : msg || 'Помилка')
     }
   }
 

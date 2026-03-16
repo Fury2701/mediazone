@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { authApi } from '../api/client'
 
-const useAuthStore = create((set, get) => ({
+const useAuthStore = create((set) => ({
   user:    null,
   token:   localStorage.getItem('token'),
   loading: false,
@@ -20,23 +20,34 @@ const useAuthStore = create((set, get) => ({
 
   login: async (username, password) => {
     set({ loading: true })
-    const { data } = await authApi.login({ username, password })
-    localStorage.setItem('token', data.access_token)
-    const me = await authApi.me()
-    set({ token: data.access_token, user: me.data, loading: false })
+    try {
+      const { data } = await authApi.login({ username, password })
+      localStorage.setItem('token', data.access_token)
+      const me = await authApi.me()
+      set({ token: data.access_token, user: me.data, loading: false })
+    } catch (err) {
+      set({ loading: false })
+      throw err
+    }
   },
 
   register: async (username, email, password) => {
     set({ loading: true })
-    const { data } = await authApi.register({ username, email, password })
-    localStorage.setItem('token', data.access_token)
-    const me = await authApi.me()
-    set({ token: data.access_token, user: me.data, loading: false })
+    try {
+      const { data } = await authApi.register({ username, email, password })
+      localStorage.setItem('token', data.access_token)
+      const me = await authApi.me()
+      set({ token: data.access_token, user: me.data, loading: false })
+    } catch (err) {
+      set({ loading: false })
+      throw err
+    }
   },
 
   logout: () => {
     localStorage.removeItem('token')
     set({ user: null, token: null })
+    window.location.href = '/'
   },
 }))
 

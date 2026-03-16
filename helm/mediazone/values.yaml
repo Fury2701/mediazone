@@ -24,16 +24,16 @@ ingress:
 
 # ── Secrets (заміни паролі!) ──────────────────────────────────────────────────
 env:
-  DATABASE_URL: "mysql+pymysql://mzrp:CHANGE_ME_PASSWORD@mysql:3306/mediazone"
-  SECRET_KEY: "CHANGE_ME_VERY_LONG_RANDOM_STRING_MIN_32_CHARS"
+  DATABASE_URL: "mysql+pymysql://mzrp:7741667502Rfa-14@mysql:3306/mediazone"
+  SECRET_KEY: "n7F4xQ9pL2sV8mK3dR6wT1yU5zA0bHcE"
 
 # ── MySQL StatefulSet ─────────────────────────────────────────────────────────
 mysql:
   enabled: true
-  rootPassword: "CHANGE_ME_ROOT_PASSWORD"
+  rootPassword: "7741667502Rfa-14"
   database: mediazone
   user: mzrp
-  password: "CHANGE_ME_PASSWORD"
+  password: "7741667502Rfa-14"
   storage: 10Gi
   # Використовує local-path provisioner — вбудований в K3S
   storageClass: local-path

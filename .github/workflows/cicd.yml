@@ -45,11 +45,11 @@ jobs:
         env:
           DATABASE_URL: mysql+pymysql://mzrp:test@localhost:3306/mediazone_test
           SECRET_KEY: test-secret-key-ci
-        run: pytest tests/ -v --tb=short || echo "No tests yet — skipping"
+        run: pytest tests/ -v --tb=short || echo "No tests — skipping"
 
   # ── 2. BUILD & PUSH ────────────────────────────────────────────────────────
   build:
-    name: Build & Push → ghcr.io/fury2701/mediazone
+    name: Build React + FastAPI → ghcr.io/fury2701/mediazone
     runs-on: ubuntu-latest
     needs: test
     if: github.ref == 'refs/heads/main'
@@ -63,7 +63,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Потрібен явно — без нього buildx cache падає
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -83,26 +82,24 @@ jobs:
             type=sha,prefix=,format=short
             type=raw,value=latest
 
-      - name: Build and push
+      - name: Build and push (multi-stage React + FastAPI)
         uses: docker/build-push-action@v6
         with:
-          context: ./backend
+          context: .
+          file: ./Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      # Робимо пакет публічним щоб K3S пулив без imagePullSecret
       - name: Make GHCR package public
         run: |
-          curl -s -o /dev/null -w "%{http_code}" -X PATCH \
+          curl -s -X PATCH \
             -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
             -H "Accept: application/vnd.github+json" \
             "https://api.github.com/user/packages/container/mediazone/visibility" \
-            -d '{"visibility":"public"}' \
-          | grep -q "200" && echo "✓ Package is public" \
-          || echo "⚠ Visibility update skipped — зроби вручну на github.com/fury2701 → Packages → mediazone → Settings"
+            -d '{"visibility":"public"}' || true
 
   # ── 3. UPDATE HELM VALUES → ArgoCD auto-sync ──────────────────────────────
   deploy:

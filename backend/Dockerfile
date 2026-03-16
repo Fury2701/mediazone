@@ -13,6 +13,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
+# static/ папка вже всередині контексту (backend/static/index.html)
+# main.py знайде її по відносному шляху ../static від app/
+
 RUN adduser --disabled-password --gecos "" appuser \
     && chown -R appuser /app
 USER appuser

@@ -2,14 +2,27 @@ import { useState } from 'react'
 import useAuthStore from '../hooks/useAuth'
 import toast from 'react-hot-toast'
 
+function getErrorMsg(err) {
+  const detail = err.response?.data?.detail
+  if (!detail) return 'Помилка сервера'
+  if (typeof detail === 'string') return detail
+  if (Array.isArray(detail)) return detail[0]?.msg || 'Помилка валідації'
+  return 'Невідома помилка'
+}
+
 export default function AuthModal({ mode, onClose, onSwitch }) {
   const [form, setForm] = useState({ username: '', email: '', password: '' })
+  const [error, setError] = useState('')
   const { login, register, loading } = useAuthStore()
 
-  const set = k => e => setForm(f => ({ ...f, [k]: e.target.value }))
+  const set = k => e => {
+    setError('')
+    setForm(f => ({ ...f, [k]: e.target.value }))
+  }
 
   const submit = async e => {
     e.preventDefault()
+    setError('')
     try {
       if (mode === 'login') {
         await login(form.username, form.password)
@@ -19,11 +32,9 @@ export default function AuthModal({ mode, onClose, onSwitch }) {
         toast.success('Акаунт створено!')
       }
       onClose()
-      // Даємо час toast показатись і перезавантажуємо
       setTimeout(() => window.location.href = '/', 800)
     } catch (err) {
-      const msg = err.response?.data?.detail
-      toast.error(Array.isArray(msg) ? msg[0]?.msg || 'Помилка' : msg || 'Помилка')
+      setError(getErrorMsg(err))
     }
   }
 
@@ -33,7 +44,6 @@ export default function AuthModal({ mode, onClose, onSwitch }) {
       onClick={e => e.target === e.currentTarget && onClose()}
     >
       <div className="bg-bg2 border border-border2 w-full max-w-sm">
-        {/* Header */}
         <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-border">
           <h2 className="font-condensed font-black text-2xl tracking-wider uppercase">
             {mode === 'login' ? 'Вхід' : 'Реєстрація'}
@@ -41,11 +51,10 @@ export default function AuthModal({ mode, onClose, onSwitch }) {
           <button onClick={onClose} className="text-muted hover:text-white text-xl leading-none">✕</button>
         </div>
 
-        {/* Tabs */}
         <div className="flex border-b border-border">
           {['login','register'].map(t => (
             <button key={t}
-              onClick={() => onSwitch(t)}
+              onClick={() => { onSwitch(t); setError('') }}
               className={`flex-1 py-3 font-condensed font-bold text-xs tracking-widest uppercase border-b-2 -mb-px transition-all
                 ${mode === t ? 'text-cyan border-cyan' : 'text-muted border-transparent hover:text-white'}`}
             >
@@ -54,23 +63,59 @@ export default function AuthModal({ mode, onClose, onSwitch }) {
           ))}
         </div>
 
-        {/* Form */}
         <form onSubmit={submit} className="p-6 flex flex-col gap-4">
           <div>
             <label className="label">Нікнейм</label>
-            <input className="input" placeholder="your_nickname" value={form.username} onChange={set('username')} required />
+            <input
+              className="input"
+              placeholder="your_nickname"
+              autoComplete="username"
+              value={form.username}
+              onChange={set('username')}
+              required
+            />
           </div>
           {mode === 'register' && (
             <div>
               <label className="label">Email</label>
-              <input className="input" type="email" placeholder="your@email.com" value={form.email} onChange={set('email')} required />
+              <input
+                className="input"
+                type="email"
+                placeholder="your@email.com"
+                autoComplete="email"
+                value={form.email}
+                onChange={set('email')}
+                required
+              />
             </div>
           )}
           <div>
-            <label className="label">Пароль</label>
-            <input className="input" type="password" placeholder="••••••••" value={form.password} onChange={set('password')} required />
+            <label className="label">
+              Пароль {mode === 'register' && <span className="text-muted2 normal-case font-normal">(мін. 8 символів)</span>}
+            </label>
+            <input
+              className="input"
+              type="password"
+              placeholder="••••••••"
+              autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+              value={form.password}
+              onChange={set('password')}
+              required
+              minLength={mode === 'register' ? 8 : undefined}
+            />
           </div>
-          <button type="submit" className="btn-cyan w-full h-11 mt-1" disabled={loading}>
+
+          {error && (
+            <div className="bg-red/10 border border-red/30 px-3 py-2 font-mono text-xs text-red">
+              {error}
+            </div>
+          )}
+
+          <button
+            type="submit"
+            className="btn-cyan w-full h-11 mt-1"
+            disabled={loading}
+          >
             {loading ? 'Завантаження...' : mode === 'login' ? 'Увійти' : 'Створити акаунт'}
           </button>
         </form>

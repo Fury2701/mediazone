@@ -24,7 +24,7 @@ ingress:
 
 # ── Secrets (заміни паролі!) ──────────────────────────────────────────────────
 env:
-  DATABASE_URL: "mysql+pymysql://mzrp:7741667502Rfa-14@mysql:3306/mediazone"
+  DATABASE_URL: "mysql+pymysql://mzrp:7741667502Rfa-14@mysql.mediazone:3306/mediazone"
   SECRET_KEY: "n7F4xQ9pL2sV8mK3dR6wT1yU5zA0bHcE"
 
 # ── MySQL StatefulSet ─────────────────────────────────────────────────────────

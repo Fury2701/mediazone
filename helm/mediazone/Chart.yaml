@@ -1,0 +1,6 @@
+apiVersion: v2
+name: mediazone
+description: Media Zone RP — FastAPI + MySQL
+type: application
+version: 0.1.0
+appVersion: "1.0.0"

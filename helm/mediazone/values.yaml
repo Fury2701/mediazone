@@ -1,0 +1,58 @@
+# ── Image ─────────────────────────────────────────────────────────────────────
+# Той самий registry що і k8s-lab-app: ghcr.io/fury2701/
+image:
+  repository: ghcr.io/fury2701/mediazone
+  pullPolicy: Always
+  tag: "latest"
+
+replicaCount: 2
+
+# ── Service ───────────────────────────────────────────────────────────────────
+# NodePort 30081 щоб не конфліктувати з твоїм існуючим 30080 (k8s-lab-app)
+service:
+  type: NodePort
+  port: 8000
+  nodePort: 30081
+
+# ── Ingress (Traefik — вбудований в K3S) ─────────────────────────────────────
+ingress:
+  enabled: true
+  className: traefik
+  # Traefik routing за Host header
+  # Якщо домену нема — залиш порожнім, доступ через nodePort нижче
+  host: ""   # Замінити на твій домен коли буде, напр: mzrp.example.com
+
+# ── Secrets (заміни паролі!) ──────────────────────────────────────────────────
+env:
+  DATABASE_URL: "mysql+pymysql://mzrp:CHANGE_ME_PASSWORD@mysql:3306/mediazone"
+  SECRET_KEY: "CHANGE_ME_VERY_LONG_RANDOM_STRING_MIN_32_CHARS"
+
+# ── MySQL StatefulSet ─────────────────────────────────────────────────────────
+mysql:
+  enabled: true
+  rootPassword: "CHANGE_ME_ROOT_PASSWORD"
+  database: mediazone
+  user: mzrp
+  password: "CHANGE_ME_PASSWORD"
+  storage: 10Gi
+  # Використовує local-path provisioner — вбудований в K3S
+  storageClass: local-path
+
+# ── Resources (розраховано під твої lab-vm — 2 vCPU / 4GB RAM) ───────────────
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 400m
+    memory: 384Mi
+
+# ── HPA ───────────────────────────────────────────────────────────────────────
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 4
+  targetCPUUtilizationPercentage: 70
+
+# ── Namespace ─────────────────────────────────────────────────────────────────
+namespace: mediazone

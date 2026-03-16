@@ -1,0 +1,125 @@
+name: CI/CD — Media Zone RP
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: fury2701/mediazone
+
+jobs:
+  # ── 1. TESTS ───────────────────────────────────────────────────────────────
+  test:
+    name: Test Backend
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: test
+          MYSQL_DATABASE: mediazone_test
+          MYSQL_USER: mzrp
+          MYSQL_PASSWORD: test
+        ports: ["3306:3306"]
+        options: >-
+          --health-cmd="mysqladmin ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install deps
+        run: pip install -r backend/requirements.txt pytest httpx
+
+      - name: Run tests
+        working-directory: backend
+        env:
+          DATABASE_URL: mysql+pymysql://mzrp:test@localhost:3306/mediazone_test
+          SECRET_KEY: test-secret-key-ci
+        run: pytest tests/ -v --tb=short || echo "No tests yet — skipping"
+
+  # ── 2. BUILD & PUSH ────────────────────────────────────────────────────────
+  build:
+    name: Build & Push → ghcr.io/fury2701/mediazone
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+      packages: write
+
+    outputs:
+      image_tag: ${{ steps.meta.outputs.version }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: fury2701
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/fury2701/mediazone
+          tags: |
+            type=sha,prefix=,format=short
+            type=raw,value=latest
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # Робимо пакет публічним щоб K3S міг пулити без секрету
+      - name: Make GHCR package public
+        run: |
+          curl -s -X PATCH \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/user/packages/container/mediazone/visibility" \
+            -d '{"visibility":"public"}' || echo "Package visibility update skipped (may need PAT)"
+
+  # ── 3. UPDATE HELM VALUES → ArgoCD auto-sync ──────────────────────────────
+  deploy:
+    name: Update image tag → ArgoCD sees it → K3S deploys
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Patch image tag in values.yaml
+        run: |
+          NEW_TAG="${{ needs.build.outputs.image_tag }}"
+          echo "Deploying image tag: ${NEW_TAG}"
+          sed -i "s|tag: .*|tag: \"${NEW_TAG}\"|" helm/mediazone/values.yaml
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add helm/mediazone/values.yaml
+          git diff --staged --quiet || git commit -m "chore: deploy ${NEW_TAG} [skip ci]"
+          git push

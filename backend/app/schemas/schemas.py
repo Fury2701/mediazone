@@ -1,0 +1,102 @@
+from pydantic import BaseModel, EmailStr, field_validator
+from datetime import datetime
+from typing import Optional, List
+
+# --- Auth ---
+class RegisterRequest(BaseModel):
+    username: str
+    email: EmailStr
+    password: str
+
+    @field_validator("username")
+    @classmethod
+    def username_valid(cls, v):
+        if len(v) < 3 or len(v) > 32:
+            raise ValueError("Username must be 3-32 chars")
+        return v
+
+    @field_validator("password")
+    @classmethod
+    def password_valid(cls, v):
+        if len(v) < 8:
+            raise ValueError("Password min 8 chars")
+        return v
+
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+
+# --- User ---
+class UserPublic(BaseModel):
+    id: int
+    username: str
+    role: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class UserMe(UserPublic):
+    email: str
+    last_seen: datetime
+
+# --- Forum ---
+class PostCreate(BaseModel):
+    title: str
+    body: str
+    category_id: int
+
+class ReplyCreate(BaseModel):
+    body: str
+
+class ReplyOut(BaseModel):
+    id: int
+    body: str
+    author: UserPublic
+    created_at: datetime
+    class Config:
+        from_attributes = True
+
+class PostOut(BaseModel):
+    id: int
+    title: str
+    body: str
+    views: int
+    is_pinned: bool
+    author: UserPublic
+    category_id: int
+    created_at: datetime
+    reply_count: int = 0
+    class Config:
+        from_attributes = True
+
+class CategoryOut(BaseModel):
+    id: int
+    slug: str
+    name: str
+    description: Optional[str]
+    icon: str
+    post_count: int = 0
+    class Config:
+        from_attributes = True
+
+# --- Character ---
+class CharacterCreate(BaseModel):
+    name: str
+
+class CharacterOut(BaseModel):
+    id: int
+    name: str
+    job: str
+    level: int
+    xp: int
+    cash: int
+    bank: int
+    hours: int
+    is_online: bool
+    class Config:
+        from_attributes = True

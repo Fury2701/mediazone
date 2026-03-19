@@ -10,34 +10,47 @@ export default function Forum() {
   const [categories, setCategories] = useState([])
   const [posts, setPosts]           = useState([])
   const [activeCat, setActiveCat]   = useState(null)
+  const [myOnly, setMyOnly]         = useState(false)
   const [showNew, setShowNew]       = useState(false)
-  const [newPost, setNewPost]       = useState({ title: '', body: '', category_id: '' })
+  const [newPost, setNewPost]       = useState({ title: '', body: '', category_id: '', video_url: '' })
   const { user } = useAuthStore()
   const navigate = useNavigate()
 
   useEffect(() => {
     forumApi.categories().then(r => setCategories(r.data)).catch(() => {})
-    loadPosts()
+    loadPosts(null, false)
   }, [])
 
-  const loadPosts = (catId = null) => {
-    const params = catId ? { category_id: catId, limit: 30 } : { limit: 30 }
+  const loadPosts = (catId = activeCat, mine = myOnly) => {
+    const params = { limit: 50 }
+    if (catId) params.category_id = catId
+    if (mine && user) params.author_username = user.username
     forumApi.posts(params).then(r => setPosts(r.data)).catch(() => {})
   }
 
   const selectCat = (id) => {
     setActiveCat(id)
-    loadPosts(id)
+    loadPosts(id, myOnly)
+  }
+
+  const toggleMy = () => {
+    const next = !myOnly
+    setMyOnly(next)
+    loadPosts(activeCat, next)
   }
 
   const submit = async e => {
     e.preventDefault()
     try {
-      await forumApi.createPost({ ...newPost, category_id: Number(newPost.category_id) })
+      await forumApi.createPost({
+        ...newPost,
+        category_id: Number(newPost.category_id),
+        video_url: newPost.video_url || null,
+      })
       toast.success('Тему створено!')
       setShowNew(false)
-      setNewPost({ title: '', body: '', category_id: '' })
-      loadPosts(activeCat)
+      setNewPost({ title: '', body: '', category_id: '', video_url: '' })
+      loadPosts()
     } catch (err) {
       toast.error(err.response?.data?.detail || 'Помилка')
     }
@@ -60,14 +73,14 @@ export default function Forum() {
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_240px] gap-5">
         <div>
-          {/* Categories */}
-          <div className="mb-6">
+          {/* Categories + My filter */}
+          <div className="mb-5">
             <div className="font-mono text-xs font-bold tracking-widest text-muted uppercase mb-3">Розділи</div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-px bg-border">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-px bg-border mb-3">
               <div
                 onClick={() => selectCat(null)}
                 className={`flex items-center gap-2 px-3 py-2.5 cursor-pointer transition-colors border-l-2
-                  ${!activeCat ? 'bg-bg3 border-cyan' : 'bg-bg2 border-transparent hover:bg-bg3'}`}
+                  ${!activeCat && !myOnly ? 'bg-bg3 border-cyan' : 'bg-bg2 border-transparent hover:bg-bg3'}`}
               >
                 <span className="text-base">📋</span>
                 <div className="min-w-0">
@@ -89,12 +102,26 @@ export default function Forum() {
                 </div>
               ))}
             </div>
+
+            {user && (
+              <button
+                onClick={toggleMy}
+                className={`flex items-center gap-2 px-3 py-2 font-mono text-xs font-bold tracking-widest uppercase transition-all border rounded-sm ${
+                  myOnly
+                    ? 'bg-cyan/10 border-cyan text-cyan'
+                    : 'bg-bg2 border-border text-muted hover:border-border2 hover:text-white'
+                }`}
+              >
+                <span>{myOnly ? '✓' : '○'}</span>
+                <span>Мої теми</span>
+              </button>
+            )}
           </div>
 
           {/* Posts list */}
           <div className="flex items-center justify-between mb-3">
             <div className="font-mono text-xs font-bold tracking-widest text-muted uppercase">
-              {activeCatObj ? activeCatObj.name : 'Всі теми'}
+              {myOnly ? 'Мої теми' : activeCatObj ? activeCatObj.name : 'Всі теми'}
             </div>
             <div className="font-mono text-xs text-muted2">{posts.length} записів</div>
           </div>
@@ -102,11 +129,12 @@ export default function Forum() {
           <div className="flex flex-col gap-px bg-border">
             {posts.length === 0 && (
               <div className="bg-bg2 px-5 py-12 text-center">
-                <div className="font-condensed font-black text-xl text-muted2 mb-3">Постів ще немає</div>
-                {user
-                  ? <button className="btn-cyan !text-xs !h-8 !px-4" onClick={() => setShowNew(true)}>Створити першу тему</button>
-                  : <div className="font-mono text-xs text-muted">Увійдіть щоб написати</div>
-                }
+                <div className="font-condensed font-black text-xl text-muted2 mb-3">
+                  {myOnly ? 'Ви ще не створювали тем' : 'Постів ще немає'}
+                </div>
+                {!myOnly && user && (
+                  <button className="btn-cyan !text-xs !h-8 !px-4" onClick={() => setShowNew(true)}>Створити першу тему</button>
+                )}
               </div>
             )}
             {posts.map(p => {
@@ -116,7 +144,7 @@ export default function Forum() {
                   onClick={() => navigate(`/forum/${p.id}`)}
                   className="bg-bg2 hover:bg-bg3 px-4 md:px-5 py-4 flex items-start gap-3 md:gap-4 cursor-pointer transition-colors group"
                 >
-                  <div className="w-9 h-9 md:w-10 md:h-10 bg-bg3 border border-border flex items-center justify-center text-base flex-shrink-0 mt-0.5">
+                  <div className="w-9 h-9 bg-bg3 border border-border flex items-center justify-center text-base flex-shrink-0 mt-0.5">
                     {cat?.icon ?? '💬'}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -124,8 +152,8 @@ export default function Forum() {
                       {p.is_pinned && (
                         <span className="font-mono text-[10px] font-bold px-1.5 py-0.5 bg-cyan/10 text-cyan border border-cyan/25 tracking-widest">PIN</span>
                       )}
-                      {cat && (
-                        <span className="font-mono text-[10px] font-bold px-1.5 py-0.5 bg-bg3 text-muted2 border border-border2 tracking-widest uppercase hidden sm:inline">{cat.name}</span>
+                      {p.video_url && (
+                        <span className="font-mono text-[10px] font-bold px-1.5 py-0.5 bg-orange/10 text-orange border border-orange/25 tracking-widest">▶ VIDEO</span>
                       )}
                     </div>
                     <div className="font-condensed font-bold text-sm md:text-base tracking-wide group-hover:text-cyan transition-colors mb-1 truncate">
@@ -172,13 +200,7 @@ export default function Forum() {
           <div className="bg-bg2 border border-border">
             <div className="px-4 py-2.5 border-b border-border font-mono text-xs font-bold tracking-widest text-muted uppercase">Правила форуму</div>
             <ul className="p-4 flex flex-col gap-2">
-              {[
-                'Поважай інших гравців',
-                'Не флуди та не спамь',
-                'Теми — тільки по темі розділу',
-                'РП нік: формат Name_Surname',
-                'Заборонені мат та образи',
-              ].map((r, i) => (
+              {['Поважай інших гравців', 'Не флуди та не спамь', 'Теми — тільки по темі розділу', 'РП нік: Name_Surname', 'Заборонені мат та образи'].map((r, i) => (
                 <li key={i} className="flex items-start gap-2">
                   <span className="font-mono text-[10px] text-cyan mt-0.5 flex-shrink-0">{String(i + 1).padStart(2, '0')}</span>
                   <span className="font-body text-xs text-muted leading-relaxed">{r}</span>
@@ -193,7 +215,7 @@ export default function Forum() {
       {showNew && (
         <div className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center bg-black/85 backdrop-blur-sm p-0 sm:p-4"
           onClick={e => e.target === e.currentTarget && setShowNew(false)}>
-          <div className="bg-bg2 border border-border2 w-full sm:max-w-2xl sm:rounded-sm max-h-[95vh] overflow-y-auto">
+          <div className="bg-bg2 border border-border2 w-full sm:max-w-2xl max-h-[95vh] overflow-y-auto">
             <div className="flex items-center justify-between px-5 md:px-6 py-4 border-b border-border sticky top-0 bg-bg2 z-10">
               <h2 className="font-display text-2xl uppercase tracking-wider">Нова тема</h2>
               <button onClick={() => setShowNew(false)} className="text-muted hover:text-white text-xl p-1">✕</button>
@@ -223,6 +245,13 @@ export default function Forum() {
                   value={newPost.body}
                   onChange={e => setNewPost(f => ({ ...f, body: e.target.value }))}
                   required />
+              </div>
+              <div>
+                <label className="label">Відео (необов'язково)</label>
+                <input className="input" placeholder="https://example.com/video.mp4"
+                  value={newPost.video_url}
+                  onChange={e => setNewPost(f => ({ ...f, video_url: e.target.value }))} />
+                <div className="font-mono text-xs text-muted2 mt-1">Пряме посилання на відеофайл (.mp4, .webm)</div>
               </div>
               <div className="flex gap-3 justify-end">
                 <button type="button" className="btn-ghost" onClick={() => setShowNew(false)}>Скасувати</button>

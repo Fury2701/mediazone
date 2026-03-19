@@ -72,7 +72,7 @@ export default function ForumPost() {
       <div className="bg-bg2 border border-border mb-1">
         <div className="px-4 md:px-6 pt-5 pb-4 border-b border-border">
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-            <div className="flex-1">
+            <div className="flex-1 min-w-0">
               <h1 className="font-condensed font-black text-2xl md:text-3xl uppercase tracking-wide leading-tight mb-3">{post.title}</h1>
               <div className="flex items-center gap-3 flex-wrap">
                 {post.is_pinned && (
@@ -89,6 +89,22 @@ export default function ForumPost() {
             </div>
           </div>
         </div>
+
+        {/* Video */}
+        {post.video_url && (
+          <div className="border-b border-border bg-black">
+            <video
+              src={post.video_url}
+              className="w-full max-h-[480px] object-contain"
+              controls
+              muted
+              playsInline
+              preload="metadata"
+            />
+          </div>
+        )}
+
+        {/* Body */}
         <div className="px-4 md:px-6 py-5">
           <div className="font-body text-sm text-white/85 leading-relaxed whitespace-pre-wrap">{post.body}</div>
         </div>

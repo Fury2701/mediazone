@@ -7,6 +7,7 @@ import Forum from './pages/Forum'
 import ForumPost from './pages/ForumPost'
 import About from './pages/About'
 import Cabinet from './pages/Cabinet'
+import Rules from './pages/Rules'
 
 export default function App() {
   const init = useAuthStore(s => s.init)
@@ -15,11 +16,12 @@ export default function App() {
   return (
     <Routes>
       <Route path="/" element={<Layout />}>
-        <Route index          element={<Home />} />
-        <Route path="forum"   element={<Forum />} />
+        <Route index            element={<Home />} />
+        <Route path="forum"     element={<Forum />} />
         <Route path="forum/:id" element={<ForumPost />} />
-        <Route path="about"   element={<About />} />
-        <Route path="cabinet" element={<Cabinet />} />
+        <Route path="about"     element={<About />} />
+        <Route path="cabinet"   element={<Cabinet />} />
+        <Route path="rules"     element={<Rules />} />
       </Route>
     </Routes>
   )

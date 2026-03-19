@@ -50,6 +50,7 @@ class PostCreate(BaseModel):
     title: str
     body: str
     category_id: int
+    video_url: Optional[str] = None
 
 class ReplyCreate(BaseModel):
     body: str
@@ -68,6 +69,7 @@ class PostOut(BaseModel):
     body: str
     views: int
     is_pinned: bool
+    video_url: Optional[str] = None
     author: UserPublic
     category_id: int
     created_at: datetime

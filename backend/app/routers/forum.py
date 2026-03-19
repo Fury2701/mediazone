@@ -24,6 +24,7 @@ def get_categories(db: Session = Depends(get_db)):
 @router.get("/posts", response_model=List[PostOut])
 def get_posts(
     category_id: Optional[int] = None,
+    author_username: Optional[str] = None,
     skip: int = 0,
     limit: int = 20,
     db: Session = Depends(get_db),
@@ -31,6 +32,8 @@ def get_posts(
     q = db.query(Post).options(joinedload(Post.author))
     if category_id:
         q = q.filter(Post.category_id == category_id)
+    if author_username:
+        q = q.join(User).filter(User.username == author_username)
     posts = q.order_by(Post.is_pinned.desc(), Post.created_at.desc()).offset(skip).limit(limit).all()
     result = []
     for p in posts:
@@ -44,7 +47,7 @@ def create_post(body: PostCreate, user: User = Depends(get_current_user), db: Se
     cat = db.query(Category).filter(Category.id == body.category_id).first()
     if not cat:
         raise HTTPException(404, "Category not found")
-    post = Post(title=body.title, body=body.body, category_id=body.category_id, author_id=user.id)
+    post = Post(title=body.title, body=body.body, category_id=body.category_id, author_id=user.id, video_url=body.video_url)
     db.add(post)
     db.commit()
     db.refresh(post)

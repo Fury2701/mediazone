@@ -2,14 +2,11 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import useAuthStore from '../hooks/useAuth'
 import { usersApi } from '../api/client'
-import toast from 'react-hot-toast'
 
 export default function Cabinet() {
   const { user, logout, initialized } = useAuthStore()
-  const [chars, setChars]     = useState([])
-  const [tab, setTab]         = useState('overview')
-  const [newName, setNewName] = useState('')
-  const [creating, setCreating] = useState(false)
+  const [chars, setChars] = useState([])
+  const [tab, setTab]     = useState('overview')
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -18,26 +15,10 @@ export default function Cabinet() {
     usersApi.characters().then(r => setChars(r.data)).catch(() => {})
   }, [user, initialized])
 
-  const createChar = async e => {
-    e.preventDefault()
-    try {
-      setCreating(true)
-      await usersApi.createCharacter({ name: newName })
-      const r = await usersApi.characters()
-      setChars(r.data)
-      setNewName('')
-      toast.success(`Персонаж "${newName}" створено!`)
-    } catch (err) {
-      toast.error(err.response?.data?.detail || 'Помилка')
-    } finally {
-      setCreating(false)
-    }
-  }
-
   if (!initialized) return null
   if (!user) return null
 
-  const initials = user.username.slice(0, 2).toUpperCase()
+  const initials   = user.username.slice(0, 2).toUpperCase()
   const totalHours = chars.reduce((s, c) => s + c.hours, 0)
   const maxLevel   = chars.length ? Math.max(...chars.map(c => c.level)) : 1
   const xpPct      = Math.min(100, ((maxLevel % 10) / 10) * 100)
@@ -55,7 +36,6 @@ export default function Cabinet() {
       <div className="grid grid-cols-1 md:grid-cols-[220px_1fr] gap-px bg-border min-h-[60vh]">
         {/* Sidebar */}
         <div className="bg-bg2 flex flex-col">
-          {/* Profile info */}
           <div className="p-5 border-b border-border">
             <div className="w-12 h-12 md:w-14 md:h-14 flex items-center justify-center font-condensed font-black text-xl text-white mb-3"
               style={{ background: 'linear-gradient(135deg,#F72585,#7B2FBE)', clipPath: 'polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%)' }}>
@@ -65,22 +45,19 @@ export default function Cabinet() {
             <div className="font-mono text-xs text-cyan tracking-widest">// PLAYER</div>
           </div>
 
-          {/* Tabs — horizontal on mobile, vertical on desktop */}
-          <div className="flex md:flex-col overflow-x-auto md:overflow-visible flex-1 border-b md:border-b-0 border-border">
+          <div className="flex md:flex-col overflow-x-auto md:overflow-visible border-b md:border-b-0 border-border">
             {tabs.map(m => (
               <button key={m.id}
                 onClick={() => setTab(m.id)}
                 className={`flex items-center gap-2 px-4 md:px-5 py-3 md:py-3.5 border-b-2 md:border-b-0 md:border-l-[3px] flex-shrink-0 md:flex-shrink cursor-pointer transition-all font-condensed font-bold text-xs md:text-sm uppercase tracking-wide whitespace-nowrap
-                  ${tab === m.id
-                    ? 'border-cyan text-white bg-bg3'
-                    : 'border-transparent text-muted hover:text-white hover:bg-bg3'}`}
+                  ${tab === m.id ? 'border-cyan text-white bg-bg3' : 'border-transparent text-muted hover:text-white hover:bg-bg3'}`}
               >
                 {m.label}
               </button>
             ))}
           </div>
 
-          <div className="p-4 border-t border-border hidden md:block">
+          <div className="p-4 border-t border-border hidden md:block mt-auto">
             <button onClick={logout} className="btn-ghost w-full !text-red !border-red/30 hover:!border-red">Вийти</button>
           </div>
         </div>
@@ -92,9 +69,9 @@ export default function Cabinet() {
               <div className="font-mono text-xs font-bold tracking-widest text-muted uppercase mb-3">Статистика акаунту</div>
               <div className="grid grid-cols-3 gap-px bg-border mb-4">
                 {[
-                  { n: totalHours,    l: 'Годин у грі' },
-                  { n: maxLevel,      l: 'Макс рівень' },
-                  { n: chars.length,  l: 'Персонажі' },
+                  { n: totalHours,   l: 'Годин у грі' },
+                  { n: maxLevel,     l: 'Макс рівень' },
+                  { n: chars.length, l: 'Персонажі' },
                 ].map(s => (
                   <div key={s.l} className="bg-bg2 p-3 md:p-4 text-center">
                     <div className="font-display text-3xl md:text-4xl text-white">{s.n}</div>
@@ -117,7 +94,10 @@ export default function Cabinet() {
               <div className="font-mono text-xs font-bold tracking-widest text-muted uppercase mb-3">Персонажі</div>
               <div className="flex flex-col gap-px bg-border">
                 {chars.length === 0 && (
-                  <div className="bg-bg2 p-6 text-center font-mono text-sm text-muted">Немає персонажів — створіть першого!</div>
+                  <div className="bg-bg2 p-6 text-center">
+                    <div className="font-mono text-sm text-muted mb-1">Немає персонажів</div>
+                    <div className="font-mono text-xs text-muted2">Підключіться до сервера FiveM щоб створити персонажа</div>
+                  </div>
                 )}
                 {chars.map(c => (
                   <div key={c.id} className="bg-bg2 flex items-stretch">
@@ -138,40 +118,51 @@ export default function Cabinet() {
 
           {tab === 'chars' && (
             <>
-              <div className="font-mono text-xs font-bold tracking-widest text-muted uppercase mb-3">Мої персонажі</div>
-              <div className="flex flex-col gap-px bg-border mb-4">
-                {chars.map(c => (
-                  <div key={c.id} className="bg-bg2 flex items-stretch">
-                    <div className={`w-1 flex-shrink-0 ${c.is_online ? 'bg-green' : 'bg-border'}`} />
-                    <div className="flex-1 px-4 md:px-5 py-4 border-r border-border min-w-0">
-                      <div className="font-condensed font-black text-base uppercase truncate">{c.name}</div>
-                      <div className="font-mono text-xs text-muted">{c.job} · {c.hours}год · LVL {c.level}</div>
-                    </div>
-                    <div className="px-4 md:px-5 flex flex-col justify-center text-right flex-shrink-0">
-                      <div className="font-mono text-sm font-bold text-green">${c.cash.toLocaleString()}</div>
-                      <div className="font-mono text-xs text-muted">{c.is_online ? '● ONLINE' : '● OFFLINE'}</div>
-                    </div>
-                  </div>
-                ))}
+              <div className="font-mono text-xs font-bold tracking-widest text-muted uppercase mb-1">Мої персонажі</div>
+              <div className="font-mono text-xs text-muted2 mb-4">
+                Персонажі створюються та редагуються тільки через гру (FiveM)
               </div>
-              <form onSubmit={createChar} className="bg-bg2 border border-border p-4">
-                <div className="flex gap-3 mb-2">
-                  <input
-                    className="input flex-1"
-                    placeholder="John_Doe"
-                    value={newName}
-                    onChange={e => setNewName(e.target.value)}
-                    pattern="^[A-ZА-ЯІЇЄ][a-zA-Zа-яА-ЯёЁіІїЇєЄ]+_[A-ZА-ЯІЇЄ][a-zA-Zа-яА-ЯёЁіІїЇєЄ]+$"
-                    required
-                  />
-                  <button type="submit" className="btn-cyan flex-shrink-0 !px-4" disabled={creating}>
-                    {creating ? '...' : '+ Створити'}
-                  </button>
+
+              {chars.length === 0 ? (
+                <div className="bg-bg2 border border-border p-8 text-center">
+                  <div className="text-4xl mb-3">🎮</div>
+                  <div className="font-condensed font-black text-xl text-white mb-2">Немає персонажів</div>
+                  <div className="font-mono text-xs text-muted max-w-xs mx-auto">
+                    Підключіться до сервера MediaZone у FiveM і створіть свого першого персонажа
+                  </div>
                 </div>
-                <div className="font-mono text-xs text-muted2">
-                  Формат: <span className="text-cyan">Name_Surname</span> — перша літера велика, розділювач <span className="text-cyan">_</span>
+              ) : (
+                <div className="flex flex-col gap-3">
+                  {chars.map(c => (
+                    <div key={c.id} className="bg-bg2 border border-border overflow-hidden">
+                      <div className="flex items-center gap-3 px-5 py-3 border-b border-border">
+                        <div className={`w-2 h-2 rounded-full flex-shrink-0 ${c.is_online ? 'bg-green' : 'bg-muted2'}`} />
+                        <div className="font-condensed font-black text-base uppercase tracking-wide flex-1">{c.name}</div>
+                        <span className={`font-mono text-[10px] font-bold tracking-widest ${c.is_online ? 'text-green' : 'text-muted2'}`}>
+                          {c.is_online ? 'ONLINE' : 'OFFLINE'}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-px bg-border">
+                        {[
+                          { label: 'Робота',  val: c.job },
+                          { label: 'Рівень',  val: `LVL ${c.level}` },
+                          { label: 'Готівка', val: `$${c.cash.toLocaleString()}` },
+                          { label: 'Банк',    val: `$${c.bank.toLocaleString()}` },
+                        ].map(f => (
+                          <div key={f.label} className="bg-bg p-3">
+                            <div className="font-mono text-[10px] text-muted uppercase tracking-widest mb-1">{f.label}</div>
+                            <div className="font-condensed font-black text-sm text-white">{f.val}</div>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="px-5 py-2 flex items-center justify-between">
+                        <span className="font-mono text-xs text-muted">{c.hours} год у грі</span>
+                        <span className="font-mono text-xs text-muted2">XP: {c.xp}</span>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              </form>
+              )}
             </>
           )}
 
@@ -180,9 +171,9 @@ export default function Cabinet() {
               <div className="font-mono text-xs font-bold tracking-widest text-muted uppercase mb-4">Інформація акаунту</div>
               <div className="bg-bg2 border border-border p-4 md:p-5 flex flex-col gap-4 max-w-md">
                 {[
-                  { label: 'Нікнейм', value: user.username },
-                  { label: 'Email',   value: user.email },
-                  { label: 'Роль',    value: user.role },
+                  { label: 'Нікнейм',        value: user.username },
+                  { label: 'Email',           value: user.email },
+                  { label: 'Роль',            value: user.role },
                   { label: 'Зареєстрований', value: new Date(user.created_at).toLocaleDateString('uk') },
                 ].map(f => (
                   <div key={f.label}>
@@ -192,7 +183,9 @@ export default function Cabinet() {
                 ))}
               </div>
               <div className="mt-6 md:hidden">
-                <button onClick={logout} className="btn-ghost !text-red !border-red/30 hover:!border-red w-full !h-11">Вийти з акаунту</button>
+                <button onClick={logout} className="btn-ghost !text-red !border-red/30 hover:!border-red w-full !h-11">
+                  Вийти з акаунту
+                </button>
               </div>
             </>
           )}

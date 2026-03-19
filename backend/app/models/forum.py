@@ -24,6 +24,7 @@ class Post(Base):
     author_id   = Column(Integer, ForeignKey("users.id"), nullable=False)
     is_pinned   = Column(Boolean, default=False)
     views       = Column(Integer, default=0)
+    video_url   = Column(String(512), nullable=True)
     created_at  = Column(DateTime, default=datetime.utcnow)
     updated_at  = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

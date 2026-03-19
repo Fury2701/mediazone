@@ -35,6 +35,16 @@ def seed():
 
     Base.metadata.create_all(bind=engine)
 
+    # Add new columns to existing tables if they don't exist yet
+    from sqlalchemy import text
+    with engine.connect() as conn:
+        try:
+            conn.execute(text("ALTER TABLE posts ADD COLUMN video_url VARCHAR(512)"))
+            conn.commit()
+            print("✓ Migration: posts.video_url added")
+        except Exception:
+            pass  # column already exists
+
     CATEGORIES = [
         ("announcements", "Оголошення",        "Офіційні новини та оновлення сервера", "📢", 1),
         ("roleplay",      "Roleplay",           "Обговорення ігрових ситуацій",          "🎭", 2),

@@ -6,8 +6,8 @@ import { statsApi } from '../api/client'
 
 export default function Layout() {
   const { user, logout } = useAuthStore()
-  const [modal, setModal]     = useState(null)
-  const [online, setOnline]   = useState(247)
+  const [modal, setModal]       = useState(null)
+  const [online, setOnline]     = useState(247)
   const [menuOpen, setMenuOpen] = useState(false)
   const navigate  = useNavigate()
   const location  = useLocation()
@@ -23,27 +23,24 @@ export default function Layout() {
   }, [])
 
   const navCls = ({ isActive }) =>
-    `flex items-center h-16 px-4 font-condensed font-bold text-xs tracking-widest uppercase transition-all relative
-     after:absolute after:bottom-0 after:left-3 after:right-3 after:h-0.5 after:transition-transform
+    `flex items-center h-16 px-3 lg:px-4 font-condensed font-bold text-xs tracking-widest uppercase transition-all relative
+     after:absolute after:bottom-0 after:left-2 after:right-2 after:h-0.5 after:transition-transform
      ${isActive
        ? 'text-white after:scale-x-100 after:bg-cyan'
        : 'text-muted after:scale-x-0 after:bg-cyan hover:text-white hover:after:scale-x-100'}`
 
-  const links = (
-    <>
-      <NavLink to="/"         end className={navCls}>Головна</NavLink>
-      <NavLink to="/forum"        className={navCls}>Форум</NavLink>
-      <NavLink to="/about"        className={navCls}>Про проект</NavLink>
-      {user && <NavLink to="/cabinet" className={navCls}>Кабінет</NavLink>}
-    </>
-  )
+  const navLinks = [
+    { to: '/',       label: 'Головна',   end: true },
+    { to: '/forum',  label: 'Форум' },
+    { to: '/rules',  label: 'Правила' },
+    { to: '/about',  label: 'Про проект' },
+    ...(user ? [{ to: '/cabinet', label: 'Кабінет' }] : []),
+  ]
 
   return (
     <div className="min-h-screen">
-      {/* NAV */}
       <nav className="sticky top-0 z-50 bg-bg/95 border-b border-border backdrop-blur-md">
         <div className="max-w-6xl mx-auto flex items-center justify-between px-4 md:px-6 h-16">
-
           {/* Logo */}
           <div className="flex items-center gap-2.5 cursor-pointer flex-shrink-0" onClick={() => navigate('/')}>
             <div className="w-8 h-8 flex items-center justify-center flex-shrink-0"
@@ -55,7 +52,11 @@ export default function Layout() {
           </div>
 
           {/* Desktop links */}
-          <div className="hidden md:flex items-center flex-1 ml-4">{links}</div>
+          <div className="hidden md:flex items-center flex-1 ml-2">
+            {navLinks.map(l => (
+              <NavLink key={l.to} to={l.to} end={l.end} className={navCls}>{l.label}</NavLink>
+            ))}
+          </div>
 
           {/* Desktop right */}
           <div className="hidden md:flex items-center gap-3 flex-shrink-0">
@@ -86,6 +87,7 @@ export default function Layout() {
             <button
               onClick={() => setMenuOpen(v => !v)}
               className="w-9 h-9 flex flex-col items-center justify-center gap-1.5 text-white"
+              aria-label="Menu"
             >
               <span className={`w-5 h-0.5 bg-current transition-all ${menuOpen ? 'rotate-45 translate-y-2' : ''}`} />
               <span className={`w-5 h-0.5 bg-current transition-all ${menuOpen ? 'opacity-0' : ''}`} />
@@ -93,58 +95,35 @@ export default function Layout() {
             </button>
           </div>
         </div>
-
-        {/* Ticker */}
-        <div className="h-7 overflow-hidden" style={{ background: 'linear-gradient(135deg,#F72585,#7B2FBE)' }}>
-          <div className="flex items-center h-full whitespace-nowrap" style={{ animation: 'ticker 30s linear infinite' }}>
-            {[...Array(2)].map((_, i) => (
-              <span key={i} className="flex items-center">
-                {['MEDIA ZONE RP','СЕРВЕР ОНЛАЙН 24/7','FiveM GTA 5 ROLEPLAY','LOS SANTOS','РЕЄСТРУЙСЯ ЗАРАЗ','ОНОВЛЕННЯ В РОЗРОБЦІ'].map((t, j) => (
-                  <span key={j} className="flex items-center">
-                    <span className="text-white/90 font-condensed font-black text-xs tracking-widest uppercase px-8">{t}</span>
-                    <span className="text-white/30">◆</span>
-                  </span>
-                ))}
-              </span>
-            ))}
-          </div>
-        </div>
       </nav>
 
       {/* Mobile menu */}
       {menuOpen && (
-        <div className="fixed inset-0 z-40 bg-bg/98 backdrop-blur-md pt-[72px] md:hidden">
-          <div className="flex flex-col h-full overflow-y-auto">
-            <div className="flex flex-col divide-y divide-border">
-              {[
-                { to: '/',        label: 'Головна',    end: true },
-                { to: '/forum',   label: 'Форум' },
-                { to: '/about',   label: 'Про проект' },
-                ...(user ? [{ to: '/cabinet', label: 'Кабінет' }] : []),
-              ].map(l => (
-                <NavLink key={l.to} to={l.to} end={l.end}
-                  className={({ isActive }) =>
-                    `px-6 py-5 font-display text-3xl tracking-widest transition-colors ${isActive ? 'text-cyan' : 'text-white'}`
-                  }
-                >
-                  {l.label}
-                </NavLink>
-              ))}
-            </div>
-            <div className="p-6 mt-auto border-t border-border flex flex-col gap-3">
-              {user ? (
-                <>
-                  <div className="font-mono text-xs text-muted mb-1">// {user.username.toUpperCase()}</div>
-                  <button className="btn-ghost w-full !h-11 !text-sm" onClick={() => navigate('/cabinet')}>Профіль</button>
-                  <button className="btn-ghost w-full !h-11 !text-sm !text-red !border-red/30" onClick={logout}>Вийти</button>
-                </>
-              ) : (
-                <>
-                  <button className="btn-ghost w-full !h-11 !text-sm" onClick={() => setModal('login')}>Увійти</button>
-                  <button className="btn-cyan w-full !h-11 !text-sm" onClick={() => setModal('register')}>Реєстрація</button>
-                </>
-              )}
-            </div>
+        <div className="fixed inset-0 z-40 bg-bg/98 backdrop-blur-md pt-16 md:hidden overflow-y-auto">
+          <div className="flex flex-col divide-y divide-border">
+            {navLinks.map(l => (
+              <NavLink key={l.to} to={l.to} end={l.end}
+                className={({ isActive }) =>
+                  `px-6 py-5 font-display text-3xl tracking-widest transition-colors ${isActive ? 'text-cyan' : 'text-white'}`
+                }
+              >
+                {l.label}
+              </NavLink>
+            ))}
+          </div>
+          <div className="p-6 border-t border-border flex flex-col gap-3">
+            {user ? (
+              <>
+                <div className="font-mono text-xs text-muted mb-1">// {user.username.toUpperCase()}</div>
+                <button className="btn-ghost w-full !h-11 !text-sm" onClick={() => navigate('/cabinet')}>Профіль</button>
+                <button className="btn-ghost w-full !h-11 !text-sm !text-red !border-red/30" onClick={logout}>Вийти</button>
+              </>
+            ) : (
+              <>
+                <button className="btn-ghost w-full !h-11 !text-sm" onClick={() => setModal('login')}>Увійти</button>
+                <button className="btn-cyan w-full !h-11 !text-sm" onClick={() => setModal('register')}>Реєстрація</button>
+              </>
+            )}
           </div>
         </div>
       )}

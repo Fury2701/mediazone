@@ -1,6 +1,7 @@
 from pydantic import BaseModel, EmailStr, field_validator
 from datetime import datetime
 from typing import Optional, List
+import re
 
 # --- Auth ---
 class RegisterRequest(BaseModel):
@@ -87,6 +88,15 @@ class CategoryOut(BaseModel):
 # --- Character ---
 class CharacterCreate(BaseModel):
     name: str
+
+    @field_validator("name")
+    @classmethod
+    def name_valid(cls, v):
+        if not re.match(r'^[A-Z][a-zA-Zа-яА-ЯёЁіІїЇєЄ]+_[A-Z][a-zA-Zа-яА-ЯёЁіІїЇєЄ]+$', v):
+            raise ValueError("Ім'я має бути у форматі Name_Surname (наприклад: John_Doe)")
+        if len(v) < 5 or len(v) > 32:
+            raise ValueError("Ім'я має бути від 5 до 32 символів")
+        return v
 
 class CharacterOut(BaseModel):
     id: int

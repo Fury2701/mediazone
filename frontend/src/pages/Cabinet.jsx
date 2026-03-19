@@ -144,11 +144,23 @@ export default function Cabinet() {
                   </div>
                 ))}
               </div>
-              <form onSubmit={createChar} className="bg-bg2 border border-border p-4 flex gap-3">
-                <input className="input flex-1" placeholder="Ім'я нового персонажа" value={newName} onChange={e => setNewName(e.target.value)} required />
-                <button type="submit" className="btn-cyan flex-shrink-0" disabled={creating}>
-                  {creating ? '...' : '+ Створити'}
-                </button>
+              <form onSubmit={createChar} className="bg-bg2 border border-border p-4">
+                <div className="flex gap-3 mb-2">
+                  <input
+                    className="input flex-1"
+                    placeholder="John_Doe"
+                    value={newName}
+                    onChange={e => setNewName(e.target.value)}
+                    pattern="^[A-ZА-ЯІЇЄ][a-zA-Zа-яА-ЯёЁіІїЇєЄ]+_[A-ZА-ЯІЇЄ][a-zA-Zа-яА-ЯёЁіІїЇєЄ]+$"
+                    required
+                  />
+                  <button type="submit" className="btn-cyan flex-shrink-0" disabled={creating}>
+                    {creating ? '...' : '+ Створити'}
+                  </button>
+                </div>
+                <div className="font-mono text-xs text-muted2">
+                  Формат: <span className="text-cyan">Name_Surname</span> — перша літера кожного слова велика, розділювач <span className="text-cyan">_</span> (наприклад: <span className="text-white/60">John_Doe</span>)
+                </div>
               </form>
             </>
           )}

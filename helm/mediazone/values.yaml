@@ -3,7 +3,7 @@
 image:
   repository: ghcr.io/fury2701/mediazone
   pullPolicy: Always
-  tag: "ed14e14"
+  tag: "8e0fd5f"
 
 replicaCount: 2
 

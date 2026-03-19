@@ -5,36 +5,29 @@
 @layer base {
   body {
     @apply bg-bg text-white font-body overflow-x-hidden;
-  }
-
-  /* Scanline overlay */
-  body::after {
-    content: '';
-    position: fixed;
-    inset: 0;
-    background: repeating-linear-gradient(
-      0deg,
-      transparent,
-      transparent 2px,
-      rgba(0, 229, 255, 0.008) 2px,
-      rgba(0, 229, 255, 0.008) 4px
-    );
-    pointer-events: none;
-    z-index: 9999;
+    background-image:
+      radial-gradient(ellipse at 20% 50%, rgba(247,37,133,0.04) 0%, transparent 60%),
+      radial-gradient(ellipse at 80% 20%, rgba(123,47,190,0.06) 0%, transparent 60%);
   }
 
   * {
     scrollbar-width: thin;
-    scrollbar-color: rgba(0, 229, 255, 0.3) #080C10;
+    scrollbar-color: rgba(247,37,133,0.3) #08060F;
   }
   *::-webkit-scrollbar { width: 4px; }
-  *::-webkit-scrollbar-track { background: #080C10; }
-  *::-webkit-scrollbar-thumb { background: rgba(0, 229, 255, 0.3); border-radius: 4px; }
+  *::-webkit-scrollbar-track { background: #08060F; }
+  *::-webkit-scrollbar-thumb { background: rgba(247,37,133,0.3); border-radius: 4px; }
 }
 
 @layer components {
   .btn-cyan {
-    @apply bg-cyan text-bg font-condensed font-black text-sm tracking-widest uppercase px-6 h-10 rounded-sm transition-all hover:bg-cyan2 active:scale-95;
+    @apply font-condensed font-black text-sm tracking-widest uppercase px-6 h-10 rounded-sm transition-all active:scale-95 text-white border-0;
+    background: linear-gradient(135deg, #F72585 0%, #7B2FBE 100%);
+  }
+  .btn-cyan:hover {
+    opacity: 0.88;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 24px rgba(247,37,133,0.4);
   }
   .btn-ghost {
     @apply border border-border2 bg-transparent text-muted font-condensed font-bold text-xs tracking-widest uppercase px-4 h-8 rounded-sm transition-all hover:border-cyan hover:text-cyan;
@@ -51,4 +44,18 @@
   .tag {
     @apply inline-flex items-center h-5 px-2 font-mono text-xs font-bold tracking-widest uppercase rounded-sm;
   }
+  .grad-text {
+    background: linear-gradient(135deg, #F72585 0%, #7B2FBE 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .grad-border {
+    border-image: linear-gradient(135deg, #F72585, #7B2FBE) 1;
+  }
+}
+
+@keyframes ticker {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
 }

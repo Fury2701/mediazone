@@ -62,7 +62,7 @@ def test_login_wrong_password():
 
 def test_me():
     register("meuser", "me@example.com")
-    token = login("meuser")["access_token"] if isinstance(login("meuser"), dict) else login("meuser").json()["access_token"]
+    token = login("meuser").json()["access_token"]
     r = client.get("/api/users/me", headers={"Authorization": f"Bearer {token}"})
     assert r.status_code == 200
     assert r.json()["username"] == "meuser"
@@ -79,7 +79,7 @@ def test_forum_categories():
 
 def test_create_post_unauth():
     r = client.post("/api/forum/posts", json={"title": "Test", "body": "Body", "category_id": 1})
-    assert r.status_code == 403
+    assert r.status_code == 401
 
 def test_create_post_auth():
     register("poster", "poster@example.com")

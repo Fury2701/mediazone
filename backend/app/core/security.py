@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
-from jose import JWTError, jwt
+import jwt
+from jwt.exceptions import PyJWTError
 import bcrypt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -33,7 +34,7 @@ def get_current_user(
         user_id: int = payload.get("sub")
         if user_id is None:
             raise exc
-    except JWTError:
+    except PyJWTError:
         raise exc
     user = db.query(User).filter(User.id == user_id).first()
     if not user:

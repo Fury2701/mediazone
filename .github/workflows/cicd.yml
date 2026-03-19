@@ -45,7 +45,7 @@ jobs:
         env:
           DATABASE_URL: mysql+pymysql://mzrp:test@localhost:3306/mediazone_test
           SECRET_KEY: test-secret-key-ci
-        run: pytest tests/ -v --tb=short || echo "No tests — skipping"
+        run: pytest tests/ -v --tb=short
 
   # ── 2. BUILD & PUSH ────────────────────────────────────────────────────────
   build:

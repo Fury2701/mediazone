@@ -1,18 +1,21 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import useAuthStore from '../hooks/useAuth'
-import { usersApi, newsApi } from '../api/client'
+import { usersApi, newsApi, adminApi } from '../api/client'
 import toast from 'react-hot-toast'
 import { formatDistanceToNow } from 'date-fns'
 import { uk } from 'date-fns/locale'
 
 export default function Cabinet() {
   const { user, logout, initialized } = useAuthStore()
-  const [chars, setChars]     = useState([])
-  const [tab, setTab]         = useState('overview')
-  const [news, setNews]       = useState([])
-  const [newForm, setNewForm] = useState({ title: '', body: '', video_url: '' })
-  const [posting, setPosting] = useState(false)
+  const [chars, setChars]         = useState([])
+  const [tab, setTab]             = useState('overview')
+  const [news, setNews]           = useState([])
+  const [newForm, setNewForm]     = useState({ title: '', body: '', video_url: '' })
+  const [posting, setPosting]     = useState(false)
+  const [pwForm, setPwForm]       = useState({ old_password: '', new_password: '', confirm: '' })
+  const [pwLoading, setPwLoading] = useState(false)
+  const [adminUsers, setAdminUsers] = useState([])
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -20,9 +23,15 @@ export default function Cabinet() {
     if (!user) { navigate('/'); return }
     usersApi.characters().then(r => setChars(r.data)).catch(() => {})
     if (user.role === 'admin') {
-      newsApi.list({ limit: 20 }).then(r => setNews(r.data)).catch(() => {})
+      newsApi.list({ limit: 50 }).then(r => setNews(r.data)).catch(() => {})
     }
   }, [user, initialized])
+
+  useEffect(() => {
+    if (tab === 'players' && user?.role === 'admin') {
+      adminApi.users().then(r => setAdminUsers(r.data)).catch(() => toast.error('Помилка завантаження'))
+    }
+  }, [tab])
 
   const submitNews = async e => {
     e.preventDefault()
@@ -31,7 +40,7 @@ export default function Cabinet() {
       await newsApi.create({ ...newForm, video_url: newForm.video_url || null })
       toast.success('Новину опубліковано!')
       setNewForm({ title: '', body: '', video_url: '' })
-      const r = await newsApi.list({ limit: 20 })
+      const r = await newsApi.list({ limit: 50 })
       setNews(r.data)
     } catch (err) {
       toast.error(err.response?.data?.detail || 'Помилка')
@@ -50,6 +59,43 @@ export default function Cabinet() {
     }
   }
 
+  const submitPw = async e => {
+    e.preventDefault()
+    if (pwForm.new_password !== pwForm.confirm) {
+      toast.error('Паролі не співпадають')
+      return
+    }
+    try {
+      setPwLoading(true)
+      await usersApi.changePassword({ old_password: pwForm.old_password, new_password: pwForm.new_password })
+      toast.success('Пароль змінено!')
+      setPwForm({ old_password: '', new_password: '', confirm: '' })
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Помилка')
+    } finally {
+      setPwLoading(false)
+    }
+  }
+
+  const changeRole = async (userId, role) => {
+    try {
+      await adminApi.setRole(userId, role)
+      setAdminUsers(prev => prev.map(u => u.id === userId ? { ...u, role } : u))
+      toast.success('Роль змінено')
+    } catch {
+      toast.error('Помилка')
+    }
+  }
+
+  const toggleBan = async (userId) => {
+    try {
+      await adminApi.banUser(userId)
+      setAdminUsers(prev => prev.map(u => u.id === userId ? { ...u, is_active: !u.is_active } : u))
+    } catch {
+      toast.error('Помилка')
+    }
+  }
+
   if (!initialized) return null
   if (!user) return null
 
@@ -62,8 +108,13 @@ export default function Cabinet() {
     { id: 'overview',  label: 'Огляд' },
     { id: 'chars',     label: 'Персонажі' },
     { id: 'settings',  label: 'Налаштування' },
-    ...(user.role === 'admin' ? [{ id: 'news', label: '📢 Новини' }] : []),
+    ...(user.role === 'admin' ? [
+      { id: 'news',    label: '📢 Новини' },
+      { id: 'players', label: '👥 Гравці' },
+    ] : []),
   ]
+
+  const roleColors = { admin: 'text-red', moderator: 'text-orange', player: 'text-cyan' }
 
   return (
     <div className="max-w-6xl mx-auto px-4 md:px-6 py-8 md:py-12">
@@ -157,7 +208,6 @@ export default function Cabinet() {
             <>
               <div className="font-mono text-xs font-bold tracking-widest text-muted uppercase mb-1">Мої персонажі</div>
               <div className="font-mono text-xs text-muted2 mb-4">Персонажі створюються тільки через гру (FiveM)</div>
-
               {chars.length === 0 ? (
                 <div className="bg-bg2 border border-border p-8 text-center">
                   <div className="text-4xl mb-3">🎮</div>
@@ -204,7 +254,7 @@ export default function Cabinet() {
           {tab === 'settings' && (
             <>
               <div className="font-mono text-xs font-bold tracking-widest text-muted uppercase mb-4">Інформація акаунту</div>
-              <div className="bg-bg2 border border-border p-4 md:p-5 flex flex-col gap-4 max-w-md">
+              <div className="bg-bg2 border border-border p-4 md:p-5 flex flex-col gap-4 max-w-md mb-8">
                 {[
                   { label: 'Нікнейм',        value: user.username },
                   { label: 'Email',           value: user.email },
@@ -217,6 +267,37 @@ export default function Cabinet() {
                   </div>
                 ))}
               </div>
+
+              <div className="font-mono text-xs font-bold tracking-widest text-muted uppercase mb-4">Змінити пароль</div>
+              <form onSubmit={submitPw} className="bg-bg2 border border-border p-4 md:p-5 flex flex-col gap-4 max-w-md">
+                <div>
+                  <label className="label">Поточний пароль</label>
+                  <input type="password" className="input" placeholder="••••••••"
+                    value={pwForm.old_password}
+                    onChange={e => setPwForm(f => ({ ...f, old_password: e.target.value }))}
+                    required />
+                </div>
+                <div>
+                  <label className="label">Новий пароль</label>
+                  <input type="password" className="input" placeholder="Мінімум 8 символів"
+                    value={pwForm.new_password}
+                    onChange={e => setPwForm(f => ({ ...f, new_password: e.target.value }))}
+                    minLength={8} required />
+                </div>
+                <div>
+                  <label className="label">Підтвердження паролю</label>
+                  <input type="password" className="input" placeholder="Повторіть новий пароль"
+                    value={pwForm.confirm}
+                    onChange={e => setPwForm(f => ({ ...f, confirm: e.target.value }))}
+                    required />
+                </div>
+                <div className="flex justify-end">
+                  <button type="submit" className="btn-cyan !px-8" disabled={pwLoading}>
+                    {pwLoading ? 'Збереження...' : 'Змінити пароль'}
+                  </button>
+                </div>
+              </form>
+
               <div className="mt-6 md:hidden">
                 <button onClick={logout} className="btn-ghost !text-red !border-red/30 hover:!border-red w-full !h-11">
                   Вийти з акаунту
@@ -228,8 +309,6 @@ export default function Cabinet() {
           {tab === 'news' && user.role === 'admin' && (
             <>
               <div className="font-mono text-xs font-bold tracking-widest text-muted uppercase mb-4">Управління новинами</div>
-
-              {/* Create news form */}
               <form onSubmit={submitNews} className="bg-bg2 border border-border p-5 mb-6 flex flex-col gap-4">
                 <div className="font-mono text-xs font-bold tracking-widest text-muted uppercase">Нова новина</div>
                 <div>
@@ -260,15 +339,12 @@ export default function Cabinet() {
                 </div>
               </form>
 
-              {/* Existing news */}
               <div className="font-mono text-xs font-bold tracking-widest text-muted uppercase mb-3">
                 Опубліковані новини ({news.length})
               </div>
               <div className="flex flex-col gap-3">
                 {news.length === 0 && (
-                  <div className="bg-bg2 border border-border p-6 text-center font-mono text-sm text-muted">
-                    Новин ще немає
-                  </div>
+                  <div className="bg-bg2 border border-border p-6 text-center font-mono text-sm text-muted">Новин ще немає</div>
                 )}
                 {news.map(n => (
                   <div key={n.id} className="bg-bg2 border border-border overflow-hidden">
@@ -283,14 +359,62 @@ export default function Cabinet() {
                         <button
                           onClick={() => deleteNews(n.id)}
                           className="flex-shrink-0 font-mono text-xs text-red/60 hover:text-red transition-colors border border-red/20 hover:border-red/40 px-2 py-1 rounded-sm"
-                        >
-                          Видалити
-                        </button>
+                        >Видалити</button>
                       </div>
                       <div className="font-body text-sm text-muted leading-relaxed line-clamp-2 mb-2">{n.body}</div>
                       <div className="font-mono text-xs text-muted2">
                         {formatDistanceToNow(new Date(n.created_at), { addSuffix: true, locale: uk })}
                       </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
+          {tab === 'players' && user.role === 'admin' && (
+            <>
+              <div className="font-mono text-xs font-bold tracking-widest text-muted uppercase mb-4">
+                Управління гравцями ({adminUsers.length})
+              </div>
+              <div className="flex flex-col gap-px bg-border">
+                {adminUsers.length === 0 && (
+                  <div className="bg-bg2 p-6 text-center font-mono text-sm text-muted animate-pulse">Завантаження...</div>
+                )}
+                {adminUsers.map(u => (
+                  <div key={u.id} className={`bg-bg2 px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-3 ${!u.is_active ? 'opacity-50' : ''}`}>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-condensed font-black text-sm uppercase tracking-wide">{u.username}</span>
+                        <span className={`font-mono text-[10px] font-bold tracking-widest ${roleColors[u.role] || 'text-muted'}`}>
+                          {u.role.toUpperCase()}
+                        </span>
+                        {!u.is_active && (
+                          <span className="font-mono text-[10px] font-bold text-red tracking-widest px-1.5 border border-red/30">БАН</span>
+                        )}
+                      </div>
+                      <div className="font-mono text-xs text-muted2">{u.email}</div>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <select
+                        value={u.role}
+                        onChange={e => changeRole(u.id, e.target.value)}
+                        className="bg-bg3 border border-border text-white font-mono text-xs px-2 py-1.5 outline-none focus:border-cyan"
+                      >
+                        <option value="player">player</option>
+                        <option value="moderator">moderator</option>
+                        <option value="admin">admin</option>
+                      </select>
+                      <button
+                        onClick={() => toggleBan(u.id)}
+                        className={`font-mono text-[10px] font-bold tracking-widest px-2 py-1.5 border transition-colors ${
+                          u.is_active
+                            ? 'border-red/20 text-red/60 hover:border-red/50 hover:text-red'
+                            : 'border-green/30 text-green hover:border-green/60'
+                        }`}
+                      >
+                        {u.is_active ? 'БАН' : 'РОЗБАН'}
+                      </button>
                     </div>
                   </div>
                 ))}

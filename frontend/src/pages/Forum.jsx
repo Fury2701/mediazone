@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { forumApi } from '../api/client'
 import useAuthStore from '../hooks/useAuth'
@@ -6,37 +6,68 @@ import { formatDistanceToNow } from 'date-fns'
 import { uk } from 'date-fns/locale'
 import toast from 'react-hot-toast'
 
+const LIMIT = 20
+
 export default function Forum() {
   const [categories, setCategories] = useState([])
   const [posts, setPosts]           = useState([])
+  const [total, setTotal]           = useState(0)
+  const [page, setPage]             = useState(1)
   const [activeCat, setActiveCat]   = useState(null)
   const [myOnly, setMyOnly]         = useState(false)
   const [showNew, setShowNew]       = useState(false)
   const [newPost, setNewPost]       = useState({ title: '', body: '', category_id: '' })
   const { user } = useAuthStore()
   const navigate = useNavigate()
+  const bodyRef = useRef(null)
 
   useEffect(() => {
     forumApi.categories().then(r => setCategories(r.data)).catch(() => {})
-    loadPosts(null, false)
+    loadPosts(null, false, 1)
   }, [])
 
-  const loadPosts = (catId = activeCat, mine = myOnly) => {
-    const params = { limit: 50 }
+  const loadPosts = (catId, mine, pg) => {
+    const params = { limit: LIMIT, skip: (pg - 1) * LIMIT }
     if (catId) params.category_id = catId
     if (mine && user) params.author_username = user.username
-    forumApi.posts(params).then(r => setPosts(r.data)).catch(() => {})
+    forumApi.posts(params).then(r => {
+      setPosts(r.data.items)
+      setTotal(r.data.total)
+    }).catch(() => {})
   }
 
   const selectCat = (id) => {
     setActiveCat(id)
-    loadPosts(id, myOnly)
+    setPage(1)
+    loadPosts(id, myOnly, 1)
   }
 
   const toggleMy = () => {
     const next = !myOnly
     setMyOnly(next)
-    loadPosts(activeCat, next)
+    setPage(1)
+    loadPosts(activeCat, next, 1)
+  }
+
+  const goPage = (pg) => {
+    setPage(pg)
+    loadPosts(activeCat, myOnly, pg)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  const insertMd = (before, after = before) => {
+    const el = bodyRef.current
+    if (!el) return
+    const start = el.selectionStart
+    const end   = el.selectionEnd
+    const val   = el.value
+    const sel   = val.slice(start, end) || 'текст'
+    const next  = val.slice(0, start) + before + sel + after + val.slice(end)
+    setNewPost(f => ({ ...f, body: next }))
+    setTimeout(() => {
+      el.setSelectionRange(start + before.length, start + before.length + sel.length)
+      el.focus()
+    }, 0)
   }
 
   const submit = async e => {
@@ -46,13 +77,15 @@ export default function Forum() {
       toast.success('Тему створено!')
       setShowNew(false)
       setNewPost({ title: '', body: '', category_id: '' })
-      loadPosts()
+      setPage(1)
+      loadPosts(activeCat, myOnly, 1)
     } catch (err) {
       toast.error(err.response?.data?.detail || 'Помилка')
     }
   }
 
   const activeCatObj = categories.find(c => c.id === activeCat)
+  const totalPages   = Math.ceil(total / LIMIT)
 
   return (
     <div className="max-w-6xl mx-auto px-4 md:px-6 py-8 md:py-10">
@@ -81,7 +114,7 @@ export default function Forum() {
                 <span className="text-base">📋</span>
                 <div className="min-w-0">
                   <div className="font-condensed font-bold text-xs uppercase tracking-wide truncate">Всі теми</div>
-                  <div className="font-mono text-[10px] text-muted">{posts.length}</div>
+                  <div className="font-mono text-[10px] text-muted">{total}</div>
                 </div>
               </div>
               {categories.map(c => (
@@ -119,7 +152,7 @@ export default function Forum() {
             <div className="font-mono text-xs font-bold tracking-widest text-muted uppercase">
               {myOnly ? 'Мої теми' : activeCatObj ? activeCatObj.name : 'Всі теми'}
             </div>
-            <div className="font-mono text-xs text-muted2">{posts.length} записів</div>
+            <div className="font-mono text-xs text-muted2">{total} записів</div>
           </div>
 
           <div className="flex flex-col gap-px bg-border">
@@ -170,6 +203,34 @@ export default function Forum() {
               )
             })}
           </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-3 mt-4 py-4">
+              <button
+                onClick={() => goPage(page - 1)}
+                disabled={page === 1}
+                className="btn-ghost disabled:opacity-30 disabled:cursor-not-allowed"
+              >← Назад</button>
+              <div className="flex items-center gap-1">
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(pg => (
+                  <button key={pg}
+                    onClick={() => goPage(pg)}
+                    className={`w-8 h-8 font-mono text-xs transition-colors ${
+                      pg === page
+                        ? 'bg-cyan text-white'
+                        : 'bg-bg2 border border-border text-muted hover:border-border2 hover:text-white'
+                    }`}
+                  >{pg}</button>
+                ))}
+              </div>
+              <button
+                onClick={() => goPage(page + 1)}
+                disabled={page === totalPages}
+                className="btn-ghost disabled:opacity-30 disabled:cursor-not-allowed"
+              >Далі →</button>
+            </div>
+          )}
         </div>
 
         {/* Sidebar */}
@@ -178,9 +239,9 @@ export default function Forum() {
             <div className="px-4 py-2.5 border-b border-border font-mono text-xs font-bold tracking-widest text-muted uppercase">Статус сервера</div>
             <div className="p-4 flex flex-col">
               {[
-                ['СТАТУС',    <span className="text-green font-bold">● ONLINE</span>],
+                ['СТАТУС',    <span key="s" className="text-green font-bold">● ONLINE</span>],
                 ['ПЛАТФОРМА', 'FiveM'],
-                ['АПТАЙМ',    <span className="text-green">99.9%</span>],
+                ['АПТАЙМ',    <span key="u" className="text-green">99.9%</span>],
               ].map(([k, v]) => (
                 <div key={k} className="flex justify-between items-center py-2 border-b border-border last:border-none">
                   <span className="font-mono text-xs text-muted">{k}</span>
@@ -234,7 +295,20 @@ export default function Forum() {
               </div>
               <div>
                 <label className="label">Текст</label>
-                <textarea className="input resize-none" rows={7} placeholder="Детально опишіть свою думку або питання..."
+                <div className="flex gap-1 mb-1.5">
+                  {[
+                    { label: 'B', title: 'Жирний', fn: () => insertMd('**') },
+                    { label: 'I', title: 'Курсив',  fn: () => insertMd('*') },
+                    { label: '🖼', title: 'Зображення', fn: () => insertMd('![', '](url)') },
+                  ].map(b => (
+                    <button key={b.label} type="button" title={b.title}
+                      onClick={b.fn}
+                      className="w-7 h-7 bg-bg3 border border-border text-white font-bold text-xs hover:border-border2 transition-colors"
+                    >{b.label}</button>
+                  ))}
+                  <span className="font-mono text-[10px] text-muted2 ml-2 self-center">Підтримується Markdown</span>
+                </div>
+                <textarea ref={bodyRef} className="input resize-none" rows={7} placeholder="Детально опишіть свою думку або питання..."
                   value={newPost.body}
                   onChange={e => setNewPost(f => ({ ...f, body: e.target.value }))}
                   required />

@@ -32,6 +32,7 @@ export default function Layout() {
   const navLinks = [
     { to: '/',       label: 'Головна',   end: true },
     { to: '/forum',  label: 'Форум' },
+    { to: '/news',   label: 'Новини' },
     { to: '/rules',  label: 'Правила' },
     { to: '/about',  label: 'Про проект' },
     ...(user ? [{ to: '/cabinet', label: 'Кабінет' }] : []),

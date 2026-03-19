@@ -36,23 +36,32 @@ export const statsApi = {
 }
 
 export const forumApi = {
-  categories:  ()               => api.get('/forum/categories'),
-  posts:       (params)         => api.get('/forum/posts', { params }),
-  post:        (id)             => api.get(`/forum/posts/${id}`),
-  createPost:  (data)           => api.post('/forum/posts', data),
-  replies:     (postId)         => api.get(`/forum/posts/${postId}/replies`),
-  createReply: (postId, data)   => api.post(`/forum/posts/${postId}/replies`, data),
+  categories:  ()                         => api.get('/forum/categories'),
+  posts:       (params)                   => api.get('/forum/posts', { params }),
+  post:        (id)                       => api.get(`/forum/posts/${id}`),
+  createPost:  (data)                     => api.post('/forum/posts', data),
+  deletePost:  (id)                       => api.delete(`/forum/posts/${id}`),
+  pinPost:     (id)                       => api.post(`/forum/posts/${id}/pin`),
+  replies:     (postId)                   => api.get(`/forum/posts/${postId}/replies`),
+  createReply: (postId, data)             => api.post(`/forum/posts/${postId}/replies`, data),
+  deleteReply: (postId, replyId)          => api.delete(`/forum/posts/${postId}/replies/${replyId}`),
 }
 
 export const usersApi = {
-  characters:      ()     => api.get('/users/me/characters'),
-  createCharacter: (data) => api.post('/users/me/characters', data),
+  characters:     ()     => api.get('/users/me/characters'),
+  changePassword: (data) => api.put('/users/me/password', data),
 }
 
-export default api
+export const adminApi = {
+  users:   ()              => api.get('/users/admin/list'),
+  setRole: (id, role)      => api.put(`/users/admin/${id}/role`, { role }),
+  banUser: (id)            => api.put(`/users/admin/${id}/ban`),
+}
 
 export const newsApi = {
   list:   (params) => api.get('/news', { params }),
   create: (data)   => api.post('/news', data),
   delete: (id)     => api.delete(`/news/${id}`),
 }
+
+export default api

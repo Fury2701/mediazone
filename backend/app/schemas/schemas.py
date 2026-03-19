@@ -45,6 +45,30 @@ class UserMe(UserPublic):
     email: str
     last_seen: datetime
 
+class UserAdmin(BaseModel):
+    id: int
+    username: str
+    email: str
+    role: str
+    is_active: bool
+    created_at: datetime
+    class Config:
+        from_attributes = True
+
+class ChangePasswordRequest(BaseModel):
+    old_password: str
+    new_password: str
+
+    @field_validator("new_password")
+    @classmethod
+    def new_password_valid(cls, v):
+        if len(v) < 8:
+            raise ValueError("Password min 8 chars")
+        return v
+
+class SetRoleRequest(BaseModel):
+    role: str
+
 # --- Forum ---
 class PostCreate(BaseModel):
     title: str
@@ -76,6 +100,10 @@ class PostOut(BaseModel):
     reply_count: int = 0
     class Config:
         from_attributes = True
+
+class PostsPage(BaseModel):
+    items: List[PostOut]
+    total: int
 
 class CategoryOut(BaseModel):
     id: int

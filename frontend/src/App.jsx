@@ -8,6 +8,7 @@ import ForumPost from './pages/ForumPost'
 import About from './pages/About'
 import Cabinet from './pages/Cabinet'
 import Rules from './pages/Rules'
+import News from './pages/News'
 
 export default function App() {
   const init = useAuthStore(s => s.init)
@@ -22,6 +23,7 @@ export default function App() {
         <Route path="about"     element={<About />} />
         <Route path="cabinet"   element={<Cabinet />} />
         <Route path="rules"     element={<Rules />} />
+        <Route path="news"      element={<News />} />
       </Route>
     </Routes>
   )

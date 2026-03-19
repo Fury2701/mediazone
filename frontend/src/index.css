@@ -59,3 +59,24 @@
   0% { transform: translateX(0); }
   100% { transform: translateX(-50%); }
 }
+
+/* Markdown content styles */
+.markdown { @apply font-body text-sm leading-relaxed; color: rgba(255,255,255,0.85); }
+.markdown p { @apply mb-3; }
+.markdown strong { @apply font-bold text-white; }
+.markdown em { color: rgba(255,255,255,0.9); font-style: italic; }
+.markdown h1, .markdown h2, .markdown h3 { @apply font-condensed font-black uppercase tracking-wide text-white mb-2 mt-4; }
+.markdown h1 { @apply text-2xl; }
+.markdown h2 { @apply text-xl; }
+.markdown h3 { @apply text-lg; }
+.markdown ul { @apply pl-5 mb-3 list-disc; }
+.markdown ol { @apply pl-5 mb-3 list-decimal; }
+.markdown li { @apply mb-1; }
+.markdown blockquote { @apply border-l-2 border-cyan pl-3 text-muted my-2 italic; }
+.markdown code { @apply font-mono text-xs bg-bg3 px-1.5 py-0.5 text-cyan; border-radius: 2px; }
+.markdown pre { @apply bg-bg3 p-3 overflow-x-auto mb-3; border-radius: 2px; }
+.markdown pre code { @apply bg-transparent p-0 text-white/80; }
+.markdown img { max-width: 100%; max-height: 400px; border-radius: 2px; margin: 0.5rem 0; }
+.markdown a { @apply text-cyan underline; }
+.markdown a:hover { opacity: 0.8; }
+.markdown hr { @apply border-border my-4; }

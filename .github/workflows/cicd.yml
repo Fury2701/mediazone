@@ -117,7 +117,7 @@ jobs:
 
       - name: Patch image tag in values.yaml
         run: |
-          NEW_TAG="${{ needs.build.outputs.image_tag }}"
+          NEW_TAG="${GITHUB_SHA::7}"
           echo "Deploying: $NEW_TAG"
           sed -i "s|tag: .*|tag: \"${NEW_TAG}\"|" helm/mediazone/values.yaml
           git config user.name  "github-actions[bot]"

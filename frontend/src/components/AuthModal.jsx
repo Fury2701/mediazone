@@ -32,7 +32,6 @@ export default function AuthModal({ mode, onClose, onSwitch }) {
         toast.success('Акаунт створено!')
       }
       onClose()
-      setTimeout(() => window.location.href = '/', 800)
     } catch (err) {
       setError(getErrorMsg(err))
     }

@@ -48,5 +48,5 @@ def get_optional_user(
         return None
     try:
         return get_current_user(creds, db)
-    except:
+    except Exception:
         return None

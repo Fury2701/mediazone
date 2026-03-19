@@ -4,7 +4,7 @@ from app.core.database import get_db
 from app.core.security import get_current_user
 from app.models.user import User
 from app.models.forum import Character
-from app.schemas.schemas import CharacterCreate, CharacterOut, UserMe
+from app.schemas.schemas import CharacterCreate, CharacterOut, UserMe, UserPublic
 from typing import List
 
 router = APIRouter()
@@ -28,7 +28,7 @@ def create_character(body: CharacterCreate, user: User = Depends(get_current_use
     db.refresh(char)
     return char
 
-@router.get("/{username}", response_model=UserMe)
+@router.get("/{username}", response_model=UserPublic)
 def get_user(username: str, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.username == username).first()
     if not user:

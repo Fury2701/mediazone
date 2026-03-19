@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func
 from typing import List, Optional
 from app.core.database import get_db
-from app.core.security import get_current_user, get_optional_user
+from app.core.security import get_current_user
 from app.models.user import User
 from app.models.forum import Category, Post, Reply
 from app.schemas.schemas import CategoryOut, PostCreate, PostOut, ReplyCreate, ReplyOut

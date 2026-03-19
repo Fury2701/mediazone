@@ -5,7 +5,7 @@ import { usersApi } from '../api/client'
 import toast from 'react-hot-toast'
 
 export default function Cabinet() {
-  const { user, logout } = useAuthStore()
+  const { user, logout, initialized } = useAuthStore()
   const [chars, setChars]   = useState([])
   const [tab, setTab]       = useState('overview')
   const [newName, setNewName] = useState('')
@@ -13,9 +13,10 @@ export default function Cabinet() {
   const navigate = useNavigate()
 
   useEffect(() => {
+    if (!initialized) return
     if (!user) { navigate('/'); return }
     usersApi.characters().then(r => setChars(r.data)).catch(() => {})
-  }, [user])
+  }, [user, initialized])
 
   const createChar = async e => {
     e.preventDefault()
@@ -33,6 +34,7 @@ export default function Cabinet() {
     }
   }
 
+  if (!initialized) return null
   if (!user) return null
 
   const initials = user.username.slice(0, 2).toUpperCase()

@@ -2,19 +2,20 @@ import { create } from 'zustand'
 import { authApi } from '../api/client'
 
 const useAuthStore = create((set) => ({
-  user:    null,
-  token:   localStorage.getItem('token'),
-  loading: false,
+  user:        null,
+  token:       localStorage.getItem('token'),
+  loading:     false,
+  initialized: false,
 
   init: async () => {
     const token = localStorage.getItem('token')
-    if (!token) return
+    if (!token) { set({ initialized: true }); return }
     try {
       const { data } = await authApi.me()
-      set({ user: data, token })
+      set({ user: data, token, initialized: true })
     } catch {
       localStorage.removeItem('token')
-      set({ user: null, token: null })
+      set({ user: null, token: null, initialized: true })
     }
   },
 

@@ -50,3 +50,9 @@ export const usersApi = {
 }
 
 export default api
+
+export const newsApi = {
+  list:   (params) => api.get('/news', { params }),
+  create: (data)   => api.post('/news', data),
+  delete: (id)     => api.delete(`/news/${id}`),
+}

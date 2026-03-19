@@ -1,9 +1,25 @@
 export default function About() {
-  const tech = [
-    { tag: '☸ KUBERNETES', title: 'K3S Кластер', text: 'Легковісний Kubernetes для production. Автомасштабування та health checks гарантують стабільну роботу навіть під піковим навантаженням.' },
-    { tag: '→ GITOPS',     title: 'ArgoCD Deploy', text: 'GitOps: стан кластера завжди синхронізований з GitHub. Кожна зміна в main — автоматично на production без ручного втручання.' },
-    { tag: '⚡ CI/CD',      title: 'GitHub Actions', text: 'Повний pipeline: тести → Docker build → push до GHCR → ArgoCD sync. Від git push до живого сервера — менше 3 хвилин.' },
-    { tag: '◉ METRICS',    title: 'Grafana + Prometheus', text: 'Realtime метрики: онлайн гравці, CPU/RAM pods, latency, error rate. Alertmanager сповіщає команду при аномаліях.' },
+  const values = [
+    {
+      icon: '🎭',
+      title: 'Глибокий Roleplay',
+      text: 'Ми ставимо відіграш на перше місце. Кожна дія має наслідки, кожен персонаж — свою історію. Ніяких "я в меті" — тільки живий світ.',
+    },
+    {
+      icon: '⚖️',
+      title: 'Чесна гра',
+      text: 'Нульова толерантність до читерства та токсичності. Суворі але справедливі правила, незалежна адміністрація, прозорі рішення.',
+    },
+    {
+      icon: '🏗️',
+      title: 'Активний розвиток',
+      text: 'Команда розробників щотижня додає новий контент. Ми слухаємо спільноту і впроваджуємо найкращі ідеї гравців.',
+    },
+    {
+      icon: '🤝',
+      title: 'Жива спільнота',
+      text: 'Більше ніж сервер — це спільнота однодумців. Discord, форум, івенти, турніри та реальні зв\'язки між гравцями.',
+    },
   ]
 
   const roadmap = [
@@ -15,7 +31,7 @@ export default function About() {
     {
       version: 'v1.5', status: 'done', label: 'LAUNCHED', date: 'Q2 2025',
       title: 'Сайт та кабінет',
-      items: ['Офіційний сайт та форум спільноти', 'Особистий кабінет гравця', 'Статистика сервера в реальному часі', 'Реєстрація та авторизація персонажів'],
+      items: ['Офіційний сайт та форум спільноти', 'Особистий кабінет гравця', 'Статистика сервера в реальному часі', 'Реєстрація персонажів через гру'],
     },
     {
       version: 'v2.0', status: 'active', label: 'IN PROGRESS', date: 'Q3 2025',
@@ -40,47 +56,66 @@ export default function About() {
   ]
 
   const statusStyle = {
-    done:    { dot: 'bg-cyan',   badge: 'text-cyan border-cyan/40 bg-cyan/10',       icon: '✓' },
-    active:  { dot: 'bg-orange', badge: 'text-orange border-orange/40 bg-orange/10', icon: '→' },
-    planned: { dot: 'bg-border2',badge: 'text-muted2 border-border2 bg-bg3',         icon: '○' },
+    done:    { dot: 'bg-cyan',    badge: 'text-cyan border-cyan/40 bg-cyan/10',        icon: '✓' },
+    active:  { dot: 'bg-orange',  badge: 'text-orange border-orange/40 bg-orange/10',  icon: '→' },
+    planned: { dot: 'bg-border2', badge: 'text-muted2 border-border2 bg-bg3',          icon: '○' },
   }
 
   return (
     <div className="max-w-6xl mx-auto px-4 md:px-6 py-10 md:py-12">
-      {/* Header */}
-      <div className="bg-bg2 border border-border p-6 md:p-10 mb-6 relative overflow-hidden">
+
+      {/* Hero */}
+      <div className="relative bg-bg2 border border-border p-8 md:p-12 mb-8 overflow-hidden">
         <div className="absolute inset-0 pointer-events-none"
-          style={{ background: 'radial-gradient(ellipse at center,rgba(247,37,133,0.05),transparent 70%)' }} />
-        <div className="relative grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-6 items-center">
-          <div>
-            <div className="font-mono text-xs font-bold tracking-widest text-cyan uppercase mb-3">Media Zone RP — Про проект</div>
-            <h1 className="font-display uppercase leading-none mb-4" style={{ fontSize: 'clamp(2.5rem,8vw,4rem)' }}>
-              Технології<br />та Команда
-            </h1>
-            <p className="font-body text-muted text-sm leading-relaxed max-w-lg">Ми будуємо не просто ігровий сервер — це повноцінна хмарна платформа з автоматизованим деплоєм, моніторингом та масштабуванням на базі Kubernetes.</p>
-          </div>
-          <div className="text-left sm:text-right flex-shrink-0">
-            <div className="font-display text-6xl md:text-7xl text-green leading-none">99.9%</div>
-            <div className="font-mono text-xs text-muted uppercase tracking-widest mt-1">Uptime SLA</div>
+          style={{ background: 'radial-gradient(ellipse at 30% 50%, rgba(247,37,133,0.06), transparent 60%)' }} />
+        <div className="relative max-w-2xl">
+          <div className="font-mono text-xs font-bold tracking-widest text-cyan uppercase mb-3">Media Zone RP — Про нас</div>
+          <h1 className="font-display uppercase leading-none mb-5" style={{ fontSize: 'clamp(2.5rem,8vw,5rem)' }}>
+            Ласкаво просимо<br />до Los Santos
+          </h1>
+          <p className="font-body text-muted text-base leading-relaxed mb-4">
+            MediaZone RP — це україномовний FiveM сервер з акцентом на якісний roleplay та живу економіку. Ми запустились у 2025 році з метою створити місце, де кожен гравець може прожити справжнє паралельне життя в Los Santos.
+          </p>
+          <p className="font-body text-muted text-base leading-relaxed">
+            Від вуличного торговця до мера міста — кожна роль важлива. Від простого механіка до керівника поліції — кожна кар'єра реальна. Твоя історія починається тут.
+          </p>
+        </div>
+      </div>
+
+      {/* Values */}
+      <div className="mb-10">
+        <div className="font-mono text-xs font-bold tracking-widest text-cyan uppercase mb-2">Наші принципи</div>
+        <h2 className="font-display text-4xl md:text-5xl uppercase mb-8">Чим ми живемо</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-px bg-border">
+          {values.map(v => (
+            <div key={v.title} className="bg-bg2 p-6 md:p-7 hover:bg-bg3 transition-colors group">
+              <div className="text-3xl mb-4">{v.icon}</div>
+              <div className="font-condensed font-black text-xl uppercase tracking-wide mb-2 group-hover:text-cyan transition-colors">{v.title}</div>
+              <div className="font-body text-sm text-muted leading-relaxed">{v.text}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Join CTA */}
+      <div className="bg-bg2 border border-border p-8 mb-10 text-center relative overflow-hidden">
+        <div className="absolute inset-0 pointer-events-none"
+          style={{ background: 'radial-gradient(ellipse at center, rgba(247,37,133,0.05), transparent 70%)' }} />
+        <div className="relative">
+          <div className="font-display text-5xl md:text-6xl mb-4 grad-text">ПРИЄДНУЙСЯ</div>
+          <p className="font-body text-muted text-base max-w-md mx-auto mb-6">
+            Встанови FiveM, підключись до сервера MediaZone і почни свою нову RP-кар'єру вже сьогодні.
+          </p>
+          <div className="font-mono text-sm text-white/60 bg-bg3 border border-border inline-block px-4 py-2 rounded-sm tracking-widest">
+            connect mediazone.gg
           </div>
         </div>
       </div>
 
-      {/* Tech */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-px bg-border mb-6">
-        {tech.map(t => (
-          <div key={t.tag} className="bg-bg2 p-5 md:p-6 border-t-2 border-transparent hover:border-cyan transition-colors">
-            <div className="inline-flex items-center h-5 px-2.5 border border-border2 font-mono text-xs font-bold tracking-widest text-muted uppercase mb-3">{t.tag}</div>
-            <div className="font-condensed font-black text-lg uppercase tracking-wide mb-2">{t.title}</div>
-            <div className="font-body text-sm text-muted leading-relaxed">{t.text}</div>
-          </div>
-        ))}
-      </div>
-
       {/* Roadmap */}
       <div className="mb-3">
-        <div className="font-mono text-xs font-bold tracking-widest text-cyan uppercase mb-1">Дорожня карта розвитку</div>
-        <h2 className="font-display text-4xl md:text-5xl uppercase">Що вже є і що буде</h2>
+        <div className="font-mono text-xs font-bold tracking-widest text-cyan uppercase mb-1">Дорожня карта</div>
+        <h2 className="font-display text-4xl md:text-5xl uppercase mb-2">Що вже є і що буде</h2>
       </div>
 
       <div className="flex items-center gap-5 mb-8 flex-wrap">
@@ -99,7 +134,7 @@ export default function About() {
             const st = statusStyle[r.status]
             return (
               <div key={i} className={`flex gap-0 ${r.status === 'planned' ? 'opacity-60' : ''}`}>
-                <div className="w-[72px] md:w-[88px] flex-shrink-0 pt-5 pr-4 md:pr-5 text-right">
+                <div className="w-[72px] md:w-[88px] flex-shrink-0 pt-5 pr-4 text-right">
                   <div className="font-condensed font-black text-sm md:text-base text-white">{r.version}</div>
                   <div className="font-mono text-[10px] text-muted2">{r.date}</div>
                 </div>

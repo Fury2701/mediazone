@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { statsApi, forumApi } from '../api/client'
+import { statsApi, newsApi } from '../api/client'
 import { formatDistanceToNow } from 'date-fns'
 import { uk } from 'date-fns/locale'
 
@@ -21,12 +21,12 @@ function Counter({ target }) {
 
 export default function Home() {
   const [stats, setStats] = useState(null)
-  const [posts, setPosts] = useState([])
+  const [news, setNews]   = useState([])
   const navigate = useNavigate()
 
   useEffect(() => {
     statsApi.public().then(r => setStats(r.data)).catch(() => {})
-    forumApi.posts({ limit: 4 }).then(r => setPosts(r.data)).catch(() => {})
+    newsApi.list({ limit: 4 }).then(r => setNews(r.data)).catch(() => {})
   }, [])
 
   const features = [
@@ -119,24 +119,18 @@ export default function Home() {
       </div>
 
       {/* NEWS */}
-      {posts.length > 0 && (
+      {news.length > 0 && (
         <div className="border-t border-b border-border bg-bg2">
           <div className="max-w-6xl mx-auto px-4 md:px-6 py-10">
-            <div className="flex items-center justify-between mb-5">
-              <div className="font-mono text-xs font-bold tracking-widest text-muted uppercase">Останні новини</div>
-              <button className="font-mono text-xs text-cyan hover:text-white transition-colors" onClick={() => navigate('/forum')}>
-                Всі новини →
-              </button>
-            </div>
+            <div className="font-mono text-xs font-bold tracking-widest text-muted uppercase mb-5">Останні новини</div>
             <div className="flex flex-col gap-3">
-              {posts.map(p => (
-                <div key={p.id} className="bg-bg border border-border hover:border-border2 transition-colors cursor-pointer"
-                  onClick={() => navigate(`/forum/${p.id}`)}>
-                  {p.video_url && (
-                    <div className="border-b border-border">
+              {news.map(n => (
+                <div key={n.id} className="bg-bg border border-border hover:border-border2 transition-colors">
+                  {n.video_url && (
+                    <div className="border-b border-border bg-black">
                       <video
-                        src={p.video_url}
-                        className="w-full max-h-64 object-cover"
+                        src={n.video_url}
+                        className="w-full max-h-64 object-contain"
                         controls
                         muted
                         playsInline
@@ -144,15 +138,15 @@ export default function Home() {
                       />
                     </div>
                   )}
-                  <div className="px-4 md:px-5 py-4 flex items-start sm:items-center justify-between gap-4">
-                    <div className="min-w-0">
-                      <div className="font-condensed font-bold text-base tracking-wide mb-1 truncate">{p.title}</div>
-                      <div className="font-mono text-xs text-muted">
-                        {p.author.username.toUpperCase()} · {formatDistanceToNow(new Date(p.created_at), { addSuffix: true, locale: uk })}
-                        <span className="ml-2 text-muted2">💬 {p.reply_count} · 👁 {p.views}</span>
-                      </div>
+                  <div className="px-4 md:px-5 py-4">
+                    <div className="flex items-start justify-between gap-4 mb-2">
+                      <div className="font-condensed font-black text-lg uppercase tracking-wide flex-1">{n.title}</div>
+                      <span className="tag bg-cyan/10 text-cyan border border-cyan/25 flex-shrink-0 mt-0.5">NEW</span>
                     </div>
-                    <span className="tag bg-cyan/10 text-cyan border border-cyan/25 flex-shrink-0">NEW</span>
+                    <div className="font-body text-sm text-muted/80 leading-relaxed mb-3 line-clamp-3">{n.body}</div>
+                    <div className="font-mono text-xs text-muted2">
+                      {n.author.username.toUpperCase()} · {formatDistanceToNow(new Date(n.created_at), { addSuffix: true, locale: uk })}
+                    </div>
                   </div>
                 </div>
               ))}

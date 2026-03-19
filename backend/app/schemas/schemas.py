@@ -100,6 +100,22 @@ class CharacterCreate(BaseModel):
             raise ValueError("Ім'я має бути від 5 до 32 символів")
         return v
 
+# --- News ---
+class NewsCreate(BaseModel):
+    title: str
+    body: str
+    video_url: Optional[str] = None
+
+class NewsOut(BaseModel):
+    id: int
+    title: str
+    body: str
+    video_url: Optional[str] = None
+    author: UserPublic
+    created_at: datetime
+    class Config:
+        from_attributes = True
+
 class CharacterOut(BaseModel):
     id: int
     name: str

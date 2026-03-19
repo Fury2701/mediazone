@@ -12,7 +12,7 @@ export default function Forum() {
   const [activeCat, setActiveCat]   = useState(null)
   const [myOnly, setMyOnly]         = useState(false)
   const [showNew, setShowNew]       = useState(false)
-  const [newPost, setNewPost]       = useState({ title: '', body: '', category_id: '', video_url: '' })
+  const [newPost, setNewPost]       = useState({ title: '', body: '', category_id: '' })
   const { user } = useAuthStore()
   const navigate = useNavigate()
 
@@ -42,14 +42,10 @@ export default function Forum() {
   const submit = async e => {
     e.preventDefault()
     try {
-      await forumApi.createPost({
-        ...newPost,
-        category_id: Number(newPost.category_id),
-        video_url: newPost.video_url || null,
-      })
+      await forumApi.createPost({ ...newPost, category_id: Number(newPost.category_id) })
       toast.success('Тему створено!')
       setShowNew(false)
-      setNewPost({ title: '', body: '', category_id: '', video_url: '' })
+      setNewPost({ title: '', body: '', category_id: '' })
       loadPosts()
     } catch (err) {
       toast.error(err.response?.data?.detail || 'Помилка')
@@ -152,9 +148,6 @@ export default function Forum() {
                       {p.is_pinned && (
                         <span className="font-mono text-[10px] font-bold px-1.5 py-0.5 bg-cyan/10 text-cyan border border-cyan/25 tracking-widest">PIN</span>
                       )}
-                      {p.video_url && (
-                        <span className="font-mono text-[10px] font-bold px-1.5 py-0.5 bg-orange/10 text-orange border border-orange/25 tracking-widest">▶ VIDEO</span>
-                      )}
                     </div>
                     <div className="font-condensed font-bold text-sm md:text-base tracking-wide group-hover:text-cyan transition-colors mb-1 truncate">
                       {p.title}
@@ -241,17 +234,10 @@ export default function Forum() {
               </div>
               <div>
                 <label className="label">Текст</label>
-                <textarea className="input resize-none" rows={6} placeholder="Детально опишіть свою думку або питання..."
+                <textarea className="input resize-none" rows={7} placeholder="Детально опишіть свою думку або питання..."
                   value={newPost.body}
                   onChange={e => setNewPost(f => ({ ...f, body: e.target.value }))}
                   required />
-              </div>
-              <div>
-                <label className="label">Відео (необов'язково)</label>
-                <input className="input" placeholder="https://example.com/video.mp4"
-                  value={newPost.video_url}
-                  onChange={e => setNewPost(f => ({ ...f, video_url: e.target.value }))} />
-                <div className="font-mono text-xs text-muted2 mt-1">Пряме посилання на відеофайл (.mp4, .webm)</div>
               </div>
               <div className="flex gap-3 justify-end">
                 <button type="button" className="btn-ghost" onClick={() => setShowNew(false)}>Скасувати</button>

@@ -32,6 +32,7 @@ def seed():
     from app.core.database import SessionLocal, engine, Base
     from app.models.user import User           # noqa — registers model
     from app.models.forum import Category, Post, Reply, Character  # noqa
+    from app.models.news import News  # noqa
 
     Base.metadata.create_all(bind=engine)
 

@@ -1,19 +1,54 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import useAuthStore from '../hooks/useAuth'
-import { usersApi } from '../api/client'
+import { usersApi, newsApi } from '../api/client'
+import toast from 'react-hot-toast'
+import { formatDistanceToNow } from 'date-fns'
+import { uk } from 'date-fns/locale'
 
 export default function Cabinet() {
   const { user, logout, initialized } = useAuthStore()
-  const [chars, setChars] = useState([])
-  const [tab, setTab]     = useState('overview')
+  const [chars, setChars]     = useState([])
+  const [tab, setTab]         = useState('overview')
+  const [news, setNews]       = useState([])
+  const [newForm, setNewForm] = useState({ title: '', body: '', video_url: '' })
+  const [posting, setPosting] = useState(false)
   const navigate = useNavigate()
 
   useEffect(() => {
     if (!initialized) return
     if (!user) { navigate('/'); return }
     usersApi.characters().then(r => setChars(r.data)).catch(() => {})
+    if (user.role === 'admin') {
+      newsApi.list({ limit: 20 }).then(r => setNews(r.data)).catch(() => {})
+    }
   }, [user, initialized])
+
+  const submitNews = async e => {
+    e.preventDefault()
+    try {
+      setPosting(true)
+      await newsApi.create({ ...newForm, video_url: newForm.video_url || null })
+      toast.success('Новину опубліковано!')
+      setNewForm({ title: '', body: '', video_url: '' })
+      const r = await newsApi.list({ limit: 20 })
+      setNews(r.data)
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Помилка')
+    } finally {
+      setPosting(false)
+    }
+  }
+
+  const deleteNews = async (id) => {
+    try {
+      await newsApi.delete(id)
+      setNews(prev => prev.filter(n => n.id !== id))
+      toast.success('Видалено')
+    } catch {
+      toast.error('Помилка')
+    }
+  }
 
   if (!initialized) return null
   if (!user) return null
@@ -27,6 +62,7 @@ export default function Cabinet() {
     { id: 'overview',  label: 'Огляд' },
     { id: 'chars',     label: 'Персонажі' },
     { id: 'settings',  label: 'Налаштування' },
+    ...(user.role === 'admin' ? [{ id: 'news', label: '📢 Новини' }] : []),
   ]
 
   return (
@@ -42,7 +78,7 @@ export default function Cabinet() {
               {initials}
             </div>
             <div className="font-condensed font-black text-base uppercase tracking-wide">{user.username}</div>
-            <div className="font-mono text-xs text-cyan tracking-widest">// PLAYER</div>
+            <div className="font-mono text-xs text-cyan tracking-widest">// {user.role.toUpperCase()}</div>
           </div>
 
           <div className="flex md:flex-col overflow-x-auto md:overflow-visible border-b md:border-b-0 border-border">
@@ -64,6 +100,7 @@ export default function Cabinet() {
 
         {/* Main */}
         <div className="bg-bg p-4 md:p-6">
+
           {tab === 'overview' && (
             <>
               <div className="font-mono text-xs font-bold tracking-widest text-muted uppercase mb-3">Статистика акаунту</div>
@@ -119,9 +156,7 @@ export default function Cabinet() {
           {tab === 'chars' && (
             <>
               <div className="font-mono text-xs font-bold tracking-widest text-muted uppercase mb-1">Мої персонажі</div>
-              <div className="font-mono text-xs text-muted2 mb-4">
-                Персонажі створюються та редагуються тільки через гру (FiveM)
-              </div>
+              <div className="font-mono text-xs text-muted2 mb-4">Персонажі створюються тільки через гру (FiveM)</div>
 
               {chars.length === 0 ? (
                 <div className="bg-bg2 border border-border p-8 text-center">
@@ -189,6 +224,80 @@ export default function Cabinet() {
               </div>
             </>
           )}
+
+          {tab === 'news' && user.role === 'admin' && (
+            <>
+              <div className="font-mono text-xs font-bold tracking-widest text-muted uppercase mb-4">Управління новинами</div>
+
+              {/* Create news form */}
+              <form onSubmit={submitNews} className="bg-bg2 border border-border p-5 mb-6 flex flex-col gap-4">
+                <div className="font-mono text-xs font-bold tracking-widest text-muted uppercase">Нова новина</div>
+                <div>
+                  <label className="label">Заголовок</label>
+                  <input className="input" placeholder="Заголовок новини..."
+                    value={newForm.title}
+                    onChange={e => setNewForm(f => ({ ...f, title: e.target.value }))}
+                    maxLength={120} required />
+                </div>
+                <div>
+                  <label className="label">Текст</label>
+                  <textarea className="input resize-none" rows={5} placeholder="Опишіть оновлення, подію або новину..."
+                    value={newForm.body}
+                    onChange={e => setNewForm(f => ({ ...f, body: e.target.value }))}
+                    required />
+                </div>
+                <div>
+                  <label className="label">Відео URL (необов'язково)</label>
+                  <input className="input" placeholder="https://example.com/video.mp4"
+                    value={newForm.video_url}
+                    onChange={e => setNewForm(f => ({ ...f, video_url: e.target.value }))} />
+                  <div className="font-mono text-xs text-muted2 mt-1">Пряме посилання на відеофайл (.mp4, .webm)</div>
+                </div>
+                <div className="flex justify-end">
+                  <button type="submit" className="btn-cyan !px-8" disabled={posting}>
+                    {posting ? 'Публікую...' : 'Опублікувати'}
+                  </button>
+                </div>
+              </form>
+
+              {/* Existing news */}
+              <div className="font-mono text-xs font-bold tracking-widest text-muted uppercase mb-3">
+                Опубліковані новини ({news.length})
+              </div>
+              <div className="flex flex-col gap-3">
+                {news.length === 0 && (
+                  <div className="bg-bg2 border border-border p-6 text-center font-mono text-sm text-muted">
+                    Новин ще немає
+                  </div>
+                )}
+                {news.map(n => (
+                  <div key={n.id} className="bg-bg2 border border-border overflow-hidden">
+                    {n.video_url && (
+                      <div className="border-b border-border bg-black">
+                        <video src={n.video_url} className="w-full max-h-48 object-contain" controls muted playsInline preload="metadata" />
+                      </div>
+                    )}
+                    <div className="px-5 py-4">
+                      <div className="flex items-start justify-between gap-4 mb-2">
+                        <div className="font-condensed font-black text-base uppercase tracking-wide flex-1">{n.title}</div>
+                        <button
+                          onClick={() => deleteNews(n.id)}
+                          className="flex-shrink-0 font-mono text-xs text-red/60 hover:text-red transition-colors border border-red/20 hover:border-red/40 px-2 py-1 rounded-sm"
+                        >
+                          Видалити
+                        </button>
+                      </div>
+                      <div className="font-body text-sm text-muted leading-relaxed line-clamp-2 mb-2">{n.body}</div>
+                      <div className="font-mono text-xs text-muted2">
+                        {formatDistanceToNow(new Date(n.created_at), { addSuffix: true, locale: uk })}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
         </div>
       </div>
     </div>

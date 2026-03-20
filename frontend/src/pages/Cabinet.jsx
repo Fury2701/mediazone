@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import useAuthStore from '../hooks/useAuth'
 import { usersApi, newsApi, adminApi } from '../api/client'
@@ -50,6 +50,8 @@ export default function Cabinet() {
   const [userTotal, setUserTotal]     = useState(0)
   const [usersLoading, setUsersLoading] = useState(false)
   const [forumBanSelects, setForumBanSelects] = useState({}) // userId -> selected hours string
+  const searchRef = useRef('')
+  const pageRef   = useRef(1)
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -81,10 +83,14 @@ export default function Cabinet() {
     }
   }, [tab])
 
+  useEffect(() => { searchRef.current = userSearch }, [userSearch])
+  useEffect(() => { pageRef.current   = userPage   }, [userPage])
+
   useEffect(() => {
     if (tab !== 'players') return
     const t = setTimeout(() => {
       setUserPage(1)
+      pageRef.current = 1
       loadUsers(userSearch, 1)
     }, 300)
     return () => clearTimeout(t)
@@ -134,22 +140,25 @@ export default function Cabinet() {
     }
   }
 
+  const reload = () => loadUsers(searchRef.current, pageRef.current)
+
   const changeRole = async (userId, role) => {
     try {
       await adminApi.setRole(userId, role)
-      setAdminUsers(prev => prev.map(u => u.id === userId ? { ...u, role } : u))
       toast.success('Роль змінено')
-    } catch {
-      toast.error('Помилка')
+      reload()
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Помилка зміни ролі')
     }
   }
 
-  const toggleBan = async (userId) => {
+  const toggleBan = async (userId, isActive) => {
     try {
       await adminApi.banUser(userId)
-      setAdminUsers(prev => prev.map(u => u.id === userId ? { ...u, is_active: !u.is_active } : u))
-    } catch {
-      toast.error('Помилка')
+      toast.success(isActive ? 'Акаунт заблоковано' : 'Акаунт розблоковано')
+      reload()
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Помилка бану')
     }
   }
 
@@ -160,15 +169,9 @@ export default function Cabinet() {
       await adminApi.forumBan(userId, hours)
       const label = hours === null ? 'Назавжди' : BAN_DURATIONS.find(d => d.hours === hours)?.label || `${hours}г`
       toast.success(`${username} заблоковано на форумі (${label})`)
-      setAdminUsers(prev => prev.map(u => {
-        if (u.id !== userId) return u
-        const until = hours === null
-          ? '9999-12-31T00:00:00Z'
-          : new Date(Date.now() + hours * 3600000).toISOString()
-        return { ...u, forum_banned_until: until }
-      }))
-    } catch {
-      toast.error('Помилка')
+      reload()
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Помилка')
     }
   }
 
@@ -176,9 +179,9 @@ export default function Cabinet() {
     try {
       await adminApi.forumBan(userId, 0)
       toast.success(`${username} розблоковано на форумі`)
-      setAdminUsers(prev => prev.map(u => u.id === userId ? { ...u, forum_banned_until: null } : u))
-    } catch {
-      toast.error('Помилка')
+      reload()
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Помилка')
     }
   }
 
@@ -544,7 +547,7 @@ export default function Cabinet() {
                               <option value="admin">admin</option>
                             </select>
                             <button
-                              onClick={() => toggleBan(u.id)}
+                              onClick={() => toggleBan(u.id, u.is_active)}
                               className={`font-mono text-[10px] font-bold tracking-widest px-2 py-1.5 border transition-colors rounded-md ${
                                 u.is_active
                                   ? 'border-red/20 text-red/60 hover:border-red/50 hover:text-red'

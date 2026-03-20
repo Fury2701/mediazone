@@ -18,14 +18,17 @@ const BAN_DURATIONS = [
   { label: 'Назавжди',  hours: null },
 ]
 
+function parseUtc(str) {
+  if (!str) return null
+  return new Date(str.endsWith('Z') ? str : str + 'Z')
+}
 function isForumBanned(until) {
   if (!until) return false
-  return new Date(until) > new Date()
+  return parseUtc(until) > new Date()
 }
-
 function forumBanLabel(until) {
   if (!until) return null
-  const d = new Date(until)
+  const d = parseUtc(until)
   if (d.getFullYear() >= 9999) return 'Назавжди'
   return `до ${format(d, 'dd.MM.yyyy HH:mm')}`
 }

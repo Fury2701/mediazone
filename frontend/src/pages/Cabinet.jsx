@@ -19,15 +19,20 @@ const BAN_DURATIONS = [
 
 const USER_LIMIT = 20
 
+// Backend returns naive UTC datetimes (no Z). Append Z so JS parses as UTC.
+function parseUtc(str) {
+  if (!str) return null
+  return new Date(str.endsWith('Z') ? str : str + 'Z')
+}
 function isForumBanned(until) {
   if (!until) return false
-  return new Date(until) > new Date()
+  return parseUtc(until) > new Date()
 }
 function forumBanLabel(until) {
   if (!until) return null
-  const d = new Date(until)
+  const d = parseUtc(until)
   if (d.getFullYear() >= 9999) return 'Назавжди'
-  return `до ${format(d, 'dd.MM.yyyy HH:mm')}`
+  return `до ${format(d, 'dd.MM.yyyy HH:mm')}`  // date-fns format uses local TZ
 }
 
 export default function Cabinet() {
@@ -158,7 +163,7 @@ export default function Cabinet() {
       setAdminUsers(prev => prev.map(u => {
         if (u.id !== userId) return u
         const until = hours === null
-          ? '9999-12-31T00:00:00'
+          ? '9999-12-31T00:00:00Z'
           : new Date(Date.now() + hours * 3600000).toISOString()
         return { ...u, forum_banned_until: until }
       }))
@@ -257,6 +262,23 @@ export default function Cabinet() {
                     style={{ width: `${xpPct}%`, background: 'linear-gradient(90deg,#F72585,#7B2FBE)' }} />
                 </div>
               </div>
+
+              {isForumBanned(user.forum_banned_until) && (
+                <div className="bg-orange/5 border border-orange/30 rounded-xl px-4 py-3 mb-4 flex items-start gap-3">
+                  <span className="text-orange text-lg flex-shrink-0">🚫</span>
+                  <div>
+                    <div className="font-condensed font-black text-sm uppercase tracking-wide text-orange mb-0.5">
+                      Форум-бан активний
+                    </div>
+                    <div className="font-mono text-xs text-orange/70">
+                      Ви не можете писати на форумі&nbsp;
+                      {forumBanLabel(user.forum_banned_until) === 'Назавжди'
+                        ? '— бан постійний'
+                        : forumBanLabel(user.forum_banned_until)}
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <div className="font-mono text-xs font-bold tracking-widest text-muted uppercase mb-3">Персонажі</div>
               <div className="flex flex-col gap-px bg-border">

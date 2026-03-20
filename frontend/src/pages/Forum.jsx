@@ -86,7 +86,7 @@ export default function Forum() {
 
   const activeCatObj = categories.find(c => c.id === activeCat)
   const totalPages   = Math.ceil(total / LIMIT)
-  const myForumBan   = user && user.forum_banned_until && new Date(user.forum_banned_until) > new Date()
+  const myForumBan   = user && user.forum_banned_until && new Date(user.forum_banned_until.endsWith('Z') ? user.forum_banned_until : user.forum_banned_until + 'Z') > new Date()
 
   return (
     <div className="max-w-6xl mx-auto px-4 md:px-6 py-8 md:py-10">

@@ -1,14 +1,15 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy.orm import Session
+from datetime import datetime, timedelta
+from typing import List
 from app.core.database import get_db
 from app.core.security import get_current_user, hash_password, verify_password
 from app.models.user import User
 from app.models.forum import Character
 from app.schemas.schemas import (
     CharacterCreate, CharacterOut, UserMe, UserPublic,
-    ChangePasswordRequest, UserAdmin, SetRoleRequest,
+    ChangePasswordRequest, UserAdmin, SetRoleRequest, ForumBanRequest,
 )
-from typing import List
 
 router = APIRouter()
 
@@ -39,10 +40,23 @@ def change_password(body: ChangePasswordRequest, user: User = Depends(get_curren
     db.commit()
 
 @router.get("/admin/list", response_model=List[UserAdmin])
-def admin_list_users(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    if user.role != "admin":
+def admin_list_users(
+    search: str = "",
+    skip: int = 0,
+    limit: int = 20,
+    user: User = Depends(get_current_user),
+    response: Response = None,
+    db: Session = Depends(get_db),
+):
+    if user.role not in ("admin", "moderator"):
         raise HTTPException(403, "Forbidden")
-    return db.query(User).order_by(User.id).all()
+    q = db.query(User)
+    if search:
+        q = q.filter(User.username.ilike(f"{search}%"))
+    total = q.count()
+    users = q.order_by(User.id).offset(skip).limit(limit).all()
+    response.headers["X-Total-Count"] = str(total)
+    return users
 
 @router.put("/admin/{user_id}/role", status_code=204)
 def admin_set_role(user_id: int, body: SetRoleRequest, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
@@ -64,6 +78,21 @@ def admin_toggle_ban(user_id: int, user: User = Depends(get_current_user), db: S
     if not target:
         raise HTTPException(404, "User not found")
     target.is_active = not target.is_active
+    db.commit()
+
+@router.put("/admin/{user_id}/forum-ban", status_code=204)
+def admin_forum_ban(user_id: int, body: ForumBanRequest, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    if user.role not in ("admin", "moderator"):
+        raise HTTPException(403, "Forbidden")
+    target = db.query(User).filter(User.id == user_id).first()
+    if not target:
+        raise HTTPException(404, "User not found")
+    if body.hours is None:
+        target.forum_banned_until = datetime(9999, 12, 31)
+    elif body.hours == 0:
+        target.forum_banned_until = None
+    else:
+        target.forum_banned_until = datetime.utcnow() + timedelta(hours=body.hours)
     db.commit()
 
 @router.get("/{username}", response_model=UserPublic)

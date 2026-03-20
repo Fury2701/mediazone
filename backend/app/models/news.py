@@ -9,6 +9,7 @@ class News(Base):
     id         = Column(Integer, primary_key=True, index=True)
     title      = Column(String(256), nullable=False)
     body       = Column(Text, nullable=False)
+    image_url  = Column(String(512), nullable=True)
     video_url  = Column(String(512), nullable=True)
     author_id  = Column(Integer, ForeignKey("users.id"), nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)

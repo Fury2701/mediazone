@@ -4,6 +4,56 @@ import { statsApi, newsApi } from '../api/client'
 import { formatDistanceToNow } from 'date-fns'
 import { uk } from 'date-fns/locale'
 
+function NewsHomeCard({ n, featured = false }) {
+  const hasImage = !!n.image_url
+  const hasVideo = !!n.video_url
+
+  if (featured) {
+    return (
+      <div className="group bg-bg border border-border rounded-xl overflow-hidden hover:border-border2 transition-all duration-300 hover:shadow-[0_0_32px_rgba(247,37,133,0.1)] flex flex-col">
+        {hasImage && (
+          <div className="relative overflow-hidden h-52 flex-shrink-0">
+            <img src={n.image_url} alt={n.title} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+            <div className="absolute inset-0 bg-gradient-to-t from-bg/80 to-transparent" />
+          </div>
+        )}
+        {!hasImage && hasVideo && (
+          <div className="bg-black rounded-t-xl overflow-hidden flex-shrink-0">
+            <video src={n.video_url} className="w-full max-h-52 object-contain" controls muted playsInline preload="metadata" />
+          </div>
+        )}
+        <div className="px-5 py-4 flex-1 flex flex-col">
+          <div className="flex items-start justify-between gap-3 mb-2">
+            <div className="font-condensed font-black text-xl uppercase tracking-wide leading-tight flex-1">{n.title}</div>
+            <span className="tag bg-cyan/10 text-cyan border border-cyan/20 flex-shrink-0 mt-0.5">NEW</span>
+          </div>
+          <div className="font-body text-sm text-white/70 leading-relaxed mb-4 line-clamp-3 flex-1">{n.body}</div>
+          <div className="font-mono text-xs text-muted">
+            {n.author.username.toUpperCase()} · {formatDistanceToNow(new Date(n.created_at), { addSuffix: true, locale: uk })}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="group bg-bg border border-border rounded-lg overflow-hidden hover:border-border2 transition-all duration-300 hover:shadow-[0_0_20px_rgba(247,37,133,0.08)] flex gap-0">
+      {hasImage && (
+        <div className="relative overflow-hidden w-24 flex-shrink-0">
+          <img src={n.image_url} alt={n.title} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+        </div>
+      )}
+      <div className="px-4 py-3 flex-1 min-w-0">
+        <div className="font-condensed font-black text-sm uppercase tracking-wide leading-tight mb-1 truncate">{n.title}</div>
+        <div className="font-body text-xs text-white/60 leading-relaxed line-clamp-2 mb-2">{n.body}</div>
+        <div className="font-mono text-[10px] text-muted">
+          {formatDistanceToNow(new Date(n.created_at), { addSuffix: true, locale: uk })}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function Counter({ target }) {
   const [val, setVal] = useState(0)
   useEffect(() => {
@@ -121,36 +171,30 @@ export default function Home() {
       {/* NEWS */}
       {news.length > 0 && (
         <div className="border-t border-b border-border bg-bg2">
-          <div className="max-w-6xl mx-auto px-4 md:px-6 py-10">
-            <div className="font-mono text-xs font-bold tracking-widest text-muted uppercase mb-5">Останні новини</div>
-            <div className="flex flex-col gap-3">
-              {news.map(n => (
-                <div key={n.id} className="bg-bg border border-border hover:border-border2 transition-colors">
-                  {n.video_url && (
-                    <div className="border-b border-border bg-black">
-                      <video
-                        src={n.video_url}
-                        className="w-full max-h-64 object-contain"
-                        controls
-                        muted
-                        playsInline
-                        preload="metadata"
-                      />
-                    </div>
-                  )}
-                  <div className="px-4 md:px-5 py-4">
-                    <div className="flex items-start justify-between gap-4 mb-2">
-                      <div className="font-condensed font-black text-lg uppercase tracking-wide flex-1">{n.title}</div>
-                      <span className="tag bg-cyan/10 text-cyan border border-cyan/25 flex-shrink-0 mt-0.5">NEW</span>
-                    </div>
-                    <div className="font-body text-sm text-muted/80 leading-relaxed mb-3 line-clamp-3">{n.body}</div>
-                    <div className="font-mono text-xs text-muted2">
-                      {n.author.username.toUpperCase()} · {formatDistanceToNow(new Date(n.created_at), { addSuffix: true, locale: uk })}
-                    </div>
-                  </div>
-                </div>
-              ))}
+          <div className="max-w-6xl mx-auto px-4 md:px-6 py-12">
+            <div className="flex items-end justify-between mb-8 gap-4">
+              <div>
+                <div className="font-mono text-xs font-bold tracking-widest text-muted uppercase mb-2">Медіа</div>
+                <h2 className="font-display text-4xl md:text-5xl uppercase">Останні новини</h2>
+              </div>
+              <button
+                onClick={() => navigate('/news')}
+                className="btn-ghost !h-9 !px-5 flex-shrink-0"
+              >Всі новини →</button>
             </div>
+
+            {news.length === 1 ? (
+              /* Single article — full width */
+              <NewsHomeCard n={news[0]} featured />
+            ) : (
+              /* Featured + grid */
+              <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-5">
+                <NewsHomeCard n={news[0]} featured />
+                <div className="flex flex-col gap-4">
+                  {news.slice(1).map(n => <NewsHomeCard key={n.id} n={n} />)}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

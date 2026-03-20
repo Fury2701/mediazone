@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func
 from typing import List, Optional
+from datetime import datetime
 from app.core.database import get_db
 from app.core.security import get_current_user
 from app.models.user import User
@@ -9,6 +10,13 @@ from app.models.forum import Category, Post, Reply
 from app.schemas.schemas import CategoryOut, PostCreate, PostOut, PostsPage, ReplyCreate, ReplyOut
 
 router = APIRouter()
+
+def _check_forum_ban(user: User):
+    if user.forum_banned_until and user.forum_banned_until > datetime.utcnow():
+        until = user.forum_banned_until
+        if until.year >= 9999:
+            raise HTTPException(403, "Ви заблоковані на форумі назавжди")
+        raise HTTPException(403, f"Ви заблоковані на форумі до {until.strftime('%d.%m.%Y %H:%M')} UTC")
 
 @router.get("/categories", response_model=List[CategoryOut])
 def get_categories(db: Session = Depends(get_db)):
@@ -52,6 +60,7 @@ def get_posts(
 
 @router.post("/posts", response_model=PostOut, status_code=201)
 def create_post(body: PostCreate, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    _check_forum_ban(user)
     cat = db.query(Category).filter(Category.id == body.category_id).first()
     if not cat:
         raise HTTPException(404, "Category not found")
@@ -102,6 +111,7 @@ def get_replies(post_id: int, db: Session = Depends(get_db)):
 
 @router.post("/posts/{post_id}/replies", response_model=ReplyOut, status_code=201)
 def create_reply(post_id: int, body: ReplyCreate, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    _check_forum_ban(user)
     if not db.query(Post).filter(Post.id == post_id).first():
         raise HTTPException(404, "Post not found")
     reply = Reply(body=body.body, post_id=post_id, author_id=user.id)

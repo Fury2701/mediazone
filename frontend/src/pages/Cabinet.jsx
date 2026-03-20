@@ -1,21 +1,50 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import useAuthStore from '../hooks/useAuth'
 import { usersApi, newsApi, adminApi } from '../api/client'
 import toast from 'react-hot-toast'
-import { formatDistanceToNow } from 'date-fns'
+import { formatDistanceToNow, format } from 'date-fns'
 import { uk } from 'date-fns/locale'
+
+const BAN_DURATIONS = [
+  { label: '1 година',  hours: 1 },
+  { label: '3 години',  hours: 3 },
+  { label: '12 годин',  hours: 12 },
+  { label: '3 дні',     hours: 72 },
+  { label: '7 днів',    hours: 168 },
+  { label: '14 днів',   hours: 336 },
+  { label: '30 днів',   hours: 720 },
+  { label: 'Назавжди',  hours: null },
+]
+
+const USER_LIMIT = 20
+
+function isForumBanned(until) {
+  if (!until) return false
+  return new Date(until) > new Date()
+}
+function forumBanLabel(until) {
+  if (!until) return null
+  const d = new Date(until)
+  if (d.getFullYear() >= 9999) return 'Назавжди'
+  return `до ${format(d, 'dd.MM.yyyy HH:mm')}`
+}
 
 export default function Cabinet() {
   const { user, logout, initialized } = useAuthStore()
   const [chars, setChars]         = useState([])
   const [tab, setTab]             = useState('overview')
   const [news, setNews]           = useState([])
-  const [newForm, setNewForm]     = useState({ title: '', body: '', video_url: '' })
+  const [newForm, setNewForm]     = useState({ title: '', body: '', image_url: '', video_url: '' })
   const [posting, setPosting]     = useState(false)
   const [pwForm, setPwForm]       = useState({ old_password: '', new_password: '', confirm: '' })
   const [pwLoading, setPwLoading] = useState(false)
-  const [adminUsers, setAdminUsers] = useState([])
+  const [adminUsers, setAdminUsers]   = useState([])
+  const [userSearch, setUserSearch]   = useState('')
+  const [userPage, setUserPage]       = useState(1)
+  const [userTotal, setUserTotal]     = useState(0)
+  const [usersLoading, setUsersLoading] = useState(false)
+  const [forumBanSelects, setForumBanSelects] = useState({}) // userId -> selected hours string
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -27,19 +56,42 @@ export default function Cabinet() {
     }
   }, [user, initialized])
 
+  const loadUsers = useCallback(async (search, pg) => {
+    setUsersLoading(true)
+    try {
+      const r = await adminApi.users({ search: search || undefined, skip: (pg - 1) * USER_LIMIT, limit: USER_LIMIT })
+      setAdminUsers(r.data)
+      const ct = parseInt(r.headers['x-total-count'] || '0')
+      setUserTotal(ct || r.data.length)
+    } catch {
+      toast.error('Помилка завантаження')
+    } finally {
+      setUsersLoading(false)
+    }
+  }, [])
+
   useEffect(() => {
-    if (tab === 'players' && user?.role === 'admin') {
-      adminApi.users().then(r => setAdminUsers(r.data)).catch(() => toast.error('Помилка завантаження'))
+    if (tab === 'players' && user && ['admin', 'moderator'].includes(user.role)) {
+      loadUsers('', 1)
     }
   }, [tab])
+
+  useEffect(() => {
+    if (tab !== 'players') return
+    const t = setTimeout(() => {
+      setUserPage(1)
+      loadUsers(userSearch, 1)
+    }, 300)
+    return () => clearTimeout(t)
+  }, [userSearch])
 
   const submitNews = async e => {
     e.preventDefault()
     try {
       setPosting(true)
-      await newsApi.create({ ...newForm, video_url: newForm.video_url || null })
+      await newsApi.create({ ...newForm, image_url: newForm.image_url || null, video_url: newForm.video_url || null })
       toast.success('Новину опубліковано!')
-      setNewForm({ title: '', body: '', video_url: '' })
+      setNewForm({ title: '', body: '', image_url: '', video_url: '' })
       const r = await newsApi.list({ limit: 50 })
       setNews(r.data)
     } catch (err) {
@@ -96,6 +148,35 @@ export default function Cabinet() {
     }
   }
 
+  const applyForumBan = async (userId, username) => {
+    const hoursStr = forumBanSelects[userId] ?? '1'
+    const hours = hoursStr === 'null' ? null : parseInt(hoursStr)
+    try {
+      await adminApi.forumBan(userId, hours)
+      const label = hours === null ? 'Назавжди' : BAN_DURATIONS.find(d => d.hours === hours)?.label || `${hours}г`
+      toast.success(`${username} заблоковано на форумі (${label})`)
+      setAdminUsers(prev => prev.map(u => {
+        if (u.id !== userId) return u
+        const until = hours === null
+          ? '9999-12-31T00:00:00'
+          : new Date(Date.now() + hours * 3600000).toISOString()
+        return { ...u, forum_banned_until: until }
+      }))
+    } catch {
+      toast.error('Помилка')
+    }
+  }
+
+  const removeForumBan = async (userId, username) => {
+    try {
+      await adminApi.forumBan(userId, 0)
+      toast.success(`${username} розблоковано на форумі`)
+      setAdminUsers(prev => prev.map(u => u.id === userId ? { ...u, forum_banned_until: null } : u))
+    } catch {
+      toast.error('Помилка')
+    }
+  }
+
   if (!initialized) return null
   if (!user) return null
 
@@ -108,10 +189,8 @@ export default function Cabinet() {
     { id: 'overview',  label: 'Огляд' },
     { id: 'chars',     label: 'Персонажі' },
     { id: 'settings',  label: 'Налаштування' },
-    ...(user.role === 'admin' ? [
-      { id: 'news',    label: '📢 Новини' },
-      { id: 'players', label: '👥 Гравці' },
-    ] : []),
+    ...(user.role === 'admin' ? [{ id: 'news', label: '📢 Новини' }] : []),
+    ...(['admin', 'moderator'].includes(user.role) ? [{ id: 'players', label: '👥 Гравці' }] : []),
   ]
 
   const roleColors = { admin: 'text-red', moderator: 'text-orange', player: 'text-cyan' }
@@ -326,6 +405,13 @@ export default function Cabinet() {
                     required />
                 </div>
                 <div>
+                  <label className="label">Зображення URL (необов'язково)</label>
+                  <input className="input" placeholder="https://example.com/image.jpg"
+                    value={newForm.image_url}
+                    onChange={e => setNewForm(f => ({ ...f, image_url: e.target.value }))} />
+                  <div className="font-mono text-xs text-muted2 mt-1">Пряме посилання на зображення (.jpg, .png, .webp)</div>
+                </div>
+                <div>
                   <label className="label">Відео URL (необов'язково)</label>
                   <input className="input" placeholder="https://example.com/video.mp4"
                     value={newForm.video_url}
@@ -348,7 +434,12 @@ export default function Cabinet() {
                 )}
                 {news.map(n => (
                   <div key={n.id} className="bg-bg2 border border-border overflow-hidden">
-                    {n.video_url && (
+                    {n.image_url && (
+                      <div className="border-b border-border">
+                        <img src={n.image_url} alt={n.title} className="w-full max-h-48 object-cover" />
+                      </div>
+                    )}
+                    {!n.image_url && n.video_url && (
                       <div className="border-b border-border bg-black">
                         <video src={n.video_url} className="w-full max-h-48 object-contain" controls muted playsInline preload="metadata" />
                       </div>
@@ -372,53 +463,142 @@ export default function Cabinet() {
             </>
           )}
 
-          {tab === 'players' && user.role === 'admin' && (
+          {tab === 'players' && ['admin', 'moderator'].includes(user.role) && (
             <>
-              <div className="font-mono text-xs font-bold tracking-widest text-muted uppercase mb-4">
-                Управління гравцями ({adminUsers.length})
+              <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
+                <div className="font-mono text-xs font-bold tracking-widest text-muted uppercase">
+                  Управління гравцями
+                  {userTotal > 0 && <span className="text-muted2 ml-2">({userTotal})</span>}
+                </div>
+                <input
+                  className="input !w-48 !py-1.5 !text-xs"
+                  placeholder="Пошук по ніку..."
+                  value={userSearch}
+                  onChange={e => setUserSearch(e.target.value)}
+                />
               </div>
-              <div className="flex flex-col gap-px bg-border">
-                {adminUsers.length === 0 && (
+
+              <div className="flex flex-col gap-px bg-border mb-4">
+                {usersLoading && (
                   <div className="bg-bg2 p-6 text-center font-mono text-sm text-muted animate-pulse">Завантаження...</div>
                 )}
-                {adminUsers.map(u => (
-                  <div key={u.id} className={`bg-bg2 px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-3 ${!u.is_active ? 'opacity-50' : ''}`}>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-condensed font-black text-sm uppercase tracking-wide">{u.username}</span>
-                        <span className={`font-mono text-[10px] font-bold tracking-widest ${roleColors[u.role] || 'text-muted'}`}>
-                          {u.role.toUpperCase()}
-                        </span>
-                        {!u.is_active && (
-                          <span className="font-mono text-[10px] font-bold text-red tracking-widest px-1.5 border border-red/30">БАН</span>
+                {!usersLoading && adminUsers.length === 0 && (
+                  <div className="bg-bg2 p-6 text-center font-mono text-sm text-muted">Нікого не знайдено</div>
+                )}
+                {!usersLoading && adminUsers.map(u => {
+                  const banned = isForumBanned(u.forum_banned_until)
+                  const banSel = forumBanSelects[u.id] ?? '1'
+                  return (
+                    <div key={u.id} className={`bg-bg2 px-4 py-3 flex flex-col gap-2.5 ${!u.is_active ? 'opacity-50' : ''}`}>
+                      {/* Row 1: identity + account ban */}
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-condensed font-black text-sm uppercase tracking-wide">{u.username}</span>
+                            <span className={`font-mono text-[10px] font-bold tracking-widest ${roleColors[u.role] || 'text-muted'}`}>
+                              {u.role.toUpperCase()}
+                            </span>
+                            {!u.is_active && (
+                              <span className="font-mono text-[10px] font-bold text-red tracking-widest px-1.5 border border-red/30 rounded">БАН</span>
+                            )}
+                            {banned && (
+                              <span className="font-mono text-[10px] font-bold text-orange tracking-widest px-1.5 border border-orange/30 rounded">
+                                ФОРУМ-БАН {forumBanLabel(u.forum_banned_until)}
+                              </span>
+                            )}
+                          </div>
+                          <div className="font-mono text-xs text-muted2">{u.email}</div>
+                        </div>
+                        {/* Account controls — admin only */}
+                        {user.role === 'admin' && (
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            <select
+                              value={u.role}
+                              onChange={e => changeRole(u.id, e.target.value)}
+                              className="bg-bg3 border border-border text-white font-mono text-xs px-2 py-1.5 outline-none focus:border-cyan rounded-md"
+                            >
+                              <option value="player">player</option>
+                              <option value="moderator">moderator</option>
+                              <option value="admin">admin</option>
+                            </select>
+                            <button
+                              onClick={() => toggleBan(u.id)}
+                              className={`font-mono text-[10px] font-bold tracking-widest px-2 py-1.5 border transition-colors rounded-md ${
+                                u.is_active
+                                  ? 'border-red/20 text-red/60 hover:border-red/50 hover:text-red'
+                                  : 'border-green/30 text-green hover:border-green/60'
+                              }`}
+                            >
+                              {u.is_active ? 'БАН' : 'РОЗБАН'}
+                            </button>
+                          </div>
                         )}
                       </div>
-                      <div className="font-mono text-xs text-muted2">{u.email}</div>
+
+                      {/* Row 2: forum ban — admin + moderator, skip admins */}
+                      {u.role !== 'admin' && (
+                        <div className="flex items-center gap-2 flex-wrap pl-0">
+                          <span className="font-mono text-[10px] text-muted uppercase tracking-widest">Форум-бан:</span>
+                          {banned ? (
+                            <button
+                              onClick={() => removeForumBan(u.id, u.username)}
+                              className="font-mono text-[10px] font-bold tracking-widest px-2 py-1 border border-green/30 text-green hover:border-green transition-colors rounded-md"
+                            >
+                              ✓ Зняти бан
+                            </button>
+                          ) : (
+                            <>
+                              <select
+                                value={banSel}
+                                onChange={e => setForumBanSelects(prev => ({ ...prev, [u.id]: e.target.value }))}
+                                className="bg-bg3 border border-border text-white font-mono text-[10px] px-2 py-1 outline-none focus:border-cyan rounded-md"
+                              >
+                                {BAN_DURATIONS.map(d => (
+                                  <option key={String(d.hours)} value={String(d.hours)}>{d.label}</option>
+                                ))}
+                              </select>
+                              <button
+                                onClick={() => applyForumBan(u.id, u.username)}
+                                className="font-mono text-[10px] font-bold tracking-widest px-2 py-1 border border-orange/30 text-orange/70 hover:border-orange hover:text-orange transition-colors rounded-md"
+                              >
+                                Забанити
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      )}
                     </div>
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      <select
-                        value={u.role}
-                        onChange={e => changeRole(u.id, e.target.value)}
-                        className="bg-bg3 border border-border text-white font-mono text-xs px-2 py-1.5 outline-none focus:border-cyan"
-                      >
-                        <option value="player">player</option>
-                        <option value="moderator">moderator</option>
-                        <option value="admin">admin</option>
-                      </select>
-                      <button
-                        onClick={() => toggleBan(u.id)}
-                        className={`font-mono text-[10px] font-bold tracking-widest px-2 py-1.5 border transition-colors ${
-                          u.is_active
-                            ? 'border-red/20 text-red/60 hover:border-red/50 hover:text-red'
-                            : 'border-green/30 text-green hover:border-green/60'
-                        }`}
-                      >
-                        {u.is_active ? 'БАН' : 'РОЗБАН'}
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
+
+              {/* Pagination */}
+              {Math.ceil(userTotal / USER_LIMIT) > 1 && (
+                <div className="flex items-center justify-center gap-1.5">
+                  <button
+                    disabled={userPage === 1}
+                    onClick={() => { const p = userPage - 1; setUserPage(p); loadUsers(userSearch, p) }}
+                    className="btn-ghost disabled:opacity-30 !px-3 !h-8"
+                  >←</button>
+                  {Array.from({ length: Math.ceil(userTotal / USER_LIMIT) }, (_, i) => i + 1).map(pg => (
+                    <button
+                      key={pg}
+                      onClick={() => { setUserPage(pg); loadUsers(userSearch, pg) }}
+                      className={`w-8 h-8 font-mono text-xs font-bold rounded-lg transition-all ${
+                        pg === userPage
+                          ? 'text-white'
+                          : 'border border-border text-muted hover:border-border2 hover:text-white bg-transparent'
+                      }`}
+                      style={pg === userPage ? { background: 'linear-gradient(135deg,#F72585,#7B2FBE)' } : {}}
+                    >{pg}</button>
+                  ))}
+                  <button
+                    disabled={userPage === Math.ceil(userTotal / USER_LIMIT)}
+                    onClick={() => { const p = userPage + 1; setUserPage(p); loadUsers(userSearch, p) }}
+                    className="btn-ghost disabled:opacity-30 !px-3 !h-8"
+                  >→</button>
+                </div>
+              )}
             </>
           )}
 

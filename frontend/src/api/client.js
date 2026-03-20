@@ -53,9 +53,10 @@ export const usersApi = {
 }
 
 export const adminApi = {
-  users:   ()              => api.get('/users/admin/list'),
-  setRole: (id, role)      => api.put(`/users/admin/${id}/role`, { role }),
-  banUser: (id)            => api.put(`/users/admin/${id}/ban`),
+  users:      (params)        => api.get('/users/admin/list', { params }),
+  setRole:    (id, role)      => api.put(`/users/admin/${id}/role`, { role }),
+  banUser:    (id)            => api.put(`/users/admin/${id}/ban`),
+  forumBan:   (id, hours)     => api.put(`/users/admin/${id}/forum-ban`, { hours }),
 }
 
 export const newsApi = {

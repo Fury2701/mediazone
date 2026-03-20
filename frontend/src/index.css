@@ -21,28 +21,28 @@
 
 @layer components {
   .btn-cyan {
-    @apply font-condensed font-black text-sm tracking-widest uppercase px-6 h-10 rounded-sm transition-all active:scale-95 text-white border-0;
+    @apply font-condensed font-black text-sm tracking-widest uppercase px-6 h-10 rounded-lg transition-all active:scale-95 text-white border-0;
     background: linear-gradient(135deg, #F72585 0%, #7B2FBE 100%);
   }
   .btn-cyan:hover {
     opacity: 0.88;
     transform: translateY(-1px);
-    box-shadow: 0 6px 24px rgba(247,37,133,0.4);
+    box-shadow: 0 8px 28px rgba(247,37,133,0.45);
   }
   .btn-ghost {
-    @apply border border-border2 bg-transparent text-muted font-condensed font-bold text-xs tracking-widest uppercase px-4 h-8 rounded-sm transition-all hover:border-cyan hover:text-cyan;
+    @apply border border-border2 bg-transparent text-muted font-condensed font-bold text-xs tracking-widest uppercase px-4 h-8 rounded-lg transition-all hover:border-cyan hover:text-cyan;
   }
   .card {
-    @apply bg-bg2 border border-border;
+    @apply bg-bg2 border border-border rounded-xl;
   }
   .input {
-    @apply w-full bg-bg3 border border-border text-white font-body text-sm px-3 py-2.5 rounded-sm outline-none transition-colors focus:border-cyan placeholder:text-muted2;
+    @apply w-full bg-bg3 border border-border text-white font-body text-sm px-3 py-2.5 rounded-lg outline-none transition-colors focus:border-cyan placeholder:text-muted2;
   }
   .label {
     @apply block font-mono text-xs font-bold tracking-widest uppercase text-muted mb-1.5;
   }
   .tag {
-    @apply inline-flex items-center h-5 px-2 font-mono text-xs font-bold tracking-widest uppercase rounded-sm;
+    @apply inline-flex items-center h-5 px-2 font-mono text-xs font-bold tracking-widest uppercase rounded-md;
   }
   .grad-text {
     background: linear-gradient(135deg, #F72585 0%, #7B2FBE 100%);
@@ -52,6 +52,9 @@
   }
   .grad-border {
     border-image: linear-gradient(135deg, #F72585, #7B2FBE) 1;
+  }
+  .news-glow:hover {
+    box-shadow: 0 0 40px rgba(247,37,133,0.12);
   }
 }
 

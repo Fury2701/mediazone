@@ -86,6 +86,7 @@ export default function Forum() {
 
   const activeCatObj = categories.find(c => c.id === activeCat)
   const totalPages   = Math.ceil(total / LIMIT)
+  const myForumBan   = user && user.forum_banned_until && new Date(user.forum_banned_until) > new Date()
 
   return (
     <div className="max-w-6xl mx-auto px-4 md:px-6 py-8 md:py-10">
@@ -95,8 +96,13 @@ export default function Forum() {
           <div className="font-mono text-xs font-bold tracking-widest text-cyan uppercase mb-2">Спільнота</div>
           <h1 className="font-display text-5xl md:text-6xl uppercase">Форум</h1>
         </div>
-        {user && (
+        {user && !myForumBan && (
           <button className="btn-cyan !text-sm" onClick={() => setShowNew(true)}>+ Нова тема</button>
+        )}
+        {myForumBan && (
+          <div className="font-mono text-xs text-orange border border-orange/30 px-3 py-2 rounded-lg">
+            🚫 Форум-бан активний
+          </div>
         )}
       </div>
 

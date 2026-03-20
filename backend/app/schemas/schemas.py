@@ -36,6 +36,7 @@ class UserPublic(BaseModel):
     id: int
     username: str
     role: str
+    forum_banned_until: Optional[datetime] = None
     created_at: datetime
 
     class Config:
@@ -44,6 +45,7 @@ class UserPublic(BaseModel):
 class UserMe(UserPublic):
     email: str
     last_seen: datetime
+    forum_banned_until: Optional[datetime] = None
 
 class UserAdmin(BaseModel):
     id: int
@@ -51,9 +53,13 @@ class UserAdmin(BaseModel):
     email: str
     role: str
     is_active: bool
+    forum_banned_until: Optional[datetime] = None
     created_at: datetime
     class Config:
         from_attributes = True
+
+class ForumBanRequest(BaseModel):
+    hours: Optional[int] = None  # None = permanent, 0 = unban
 
 class ChangePasswordRequest(BaseModel):
     old_password: str
@@ -132,12 +138,14 @@ class CharacterCreate(BaseModel):
 class NewsCreate(BaseModel):
     title: str
     body: str
+    image_url: Optional[str] = None
     video_url: Optional[str] = None
 
 class NewsOut(BaseModel):
     id: int
     title: str
     body: str
+    image_url: Optional[str] = None
     video_url: Optional[str] = None
     author: UserPublic
     created_at: datetime
